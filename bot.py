@@ -90,6 +90,15 @@ async def add_audio(message: types.Message):
     else:
         await message.answer("❌ Failed to add track.")
 
+@dp.message(F.text.startswith("/finish"))
+async def cancel_cmd(message: types.Message):
+    if message.from_user.id in user_active_playlists:
+        del user_active_playlists[message.from_user.id]
+        await message.answer("❌ Playlist add session cancelled.")
+    else:
+        await message.answer("ℹ️ No active playlist session.")
+
+
 @dp.message(F.text.startswith("/myplaylists"))
 async def my_playlists(message: Message):
     parts = message.text.split(" ")
