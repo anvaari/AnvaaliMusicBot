@@ -4,6 +4,29 @@ from aiogram.types import Message, InputMediaAudio
 from config import app_config
 import db
 
+# List of available commands and their descriptions
+HELP_COMMANDS = {
+    "/start": "Start the bot or open a shared playlist.",
+    "/newplaylist": "Create a new playlist.",
+    "/add": "Add music to a playlist.",
+    "/finish": "Finish adding music to a playlist.",
+    "/myplaylists": "List your playlists.",
+    "/show_playlist": "Show tracks in a playlist.",
+    "/share": "Share a playlist with others.",
+    "/remove_track": "Remove a track from a playlist.",
+    "/remove_playlist": "Delete a playlist.",
+    "/rename": "Rename a playlist.",
+    "/setcover": "Set a cover image for a playlist.",
+    "/help": "Show this help message."
+}
+
+@dp.message(F.text == "/help")
+async def help_cmd(message: Message):
+    help_text = "\u2139\ufe0f **Available Commands:**\n\n"
+    for cmd, desc in HELP_COMMANDS.items():
+        help_text += f"{cmd} - {desc}\n"
+    await message.answer(help_text, parse_mode="Markdown")
+
 db.init_db()
 
 bot = Bot(token=app_config.BOT_TOKEN)
