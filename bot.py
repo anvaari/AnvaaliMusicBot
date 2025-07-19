@@ -9,15 +9,25 @@ db.init_db()
 bot = Bot(token=app_config.BOT_TOKEN)
 dp = Dispatcher()
 
-user_active_playlists: dict[str,str] = {}  # user_id → playlist_name
-pending_cover_uploads: dict[str,str] = {}  # user_id → playlist_name
+# Session state tracking
+user_states = {}  # user_id → {'state': str, 'data': any}
+user_active_playlists: dict[int, str] = {}
+pending_cover_uploads: dict[int, str] = {}
 
+# Utilities
+def set_user_state(user_id, state, data=None):
+    user_states[user_id] = {'state': state, 'data': data}
+
+def clear_user_state(user_id):
+    user_states.pop(user_id, None)
+
+def get_user_state(user_id):
+    return user_states.get(user_id)
 
 
 @dp.message(F.text.startswith("/start"))
 async def start_cmd(message: types.Message):
     db.add_user(message.from_user.id)
-
     if message.text.strip() == "/start":
         return await message.answer("Welcome to Playlist Bot! Use /newplaylist to create your first playlist.")
 
@@ -48,183 +58,236 @@ async def start_cmd(message: types.Message):
             media = [InputMediaAudio(media=file_id) for file_id in batch]
             await message.answer_media_group(media)
 
-@dp.message(F.text.startswith("/newplaylist"))
-async def new_playlist_cmd(message: Message):
-    db.add_user(message.from_user.id)
-    parts = message.text.split(" ")
-    if len(parts) != 2:
-        return await message.answer("Usage: /newplaylist <name>. <name> should be one word splitted with '-' or '_'")
-    name = parts[1]
-    user_id = db.get_user_id(message.from_user.id)
-    success = db.create_playlist(user_id, name)
-    if success:
-        await message.answer(f"✅ Playlist '{name}' created!")
-    else:
-        await message.answer(f"⚠️ Playlist '{name}' already exists.")
 
-@dp.message(F.text.startswith("/add"))
-async def add_usage(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 2:
-        return await message.answer("Usage: /add <playlist_name>")
-    playlist_name = parts[1]
-    user_id = db.get_user_id(message.from_user.id)
-    playlists = db.get_playlists(user_id)
-    if playlist_name not in playlists:
-        return await message.answer("❌ Playlist not found.")
-    
-    user_active_playlists[message.from_user.id] = playlist_name
-    await message.answer(f"🎵 You're now adding music to '{playlist_name}'. Send audio files. Type /finish to finish.")
+# ==== Handle wrong command ====
+
+@dp.message(lambda message: message.reply_to_message is None and  message.text.startswith('/') and not message.text.split()[0] in [
+    "/start", "/add", "/finish", "/myplaylists", "/show_playlist",
+    "/share", "/remove_track", "/remove_playlist", "/rename", "/set_cover", "/newplaylist"
+])
+async def unknown_command(message: types.Message):
+    await message.reply("❌ Unknown command. Type `/` to get hint :)")
+
+@dp.message(lambda message: message.reply_to_message is None and not message.text.startswith('/'))
+async def bad_message(message: types.Message):
+    if get_user_state(message.from_user.id):
+        await message.reply("❌ You should interact with reply, don't send orphan message :D ")
+    else:
+        await message.reply("❌ You have no active command. type / to get hint :)")
+
+
+# ===== New Playlist =====
+
+@dp.message(F.text == "/newplaylist")
+async def newplaylist_cmd(message: Message):
+    await message.answer("🎼 Please reply this message with the name of the new playlist:")
+    set_user_state(message.from_user.id, "waiting_playlist_name")
+        
+# ===== Add Session =====
+
+@dp.message(F.text == "/add")
+async def add_prompt(message: Message):
+    await message.answer("📝 Which playlist would you like to add music to? Reply the name to this message.")
+    set_user_state(message.from_user.id, "waiting_add_playlist")
 
 @dp.message(F.audio)
 async def add_audio(message: types.Message):
-    user_id = db.get_user_id(message.from_user.id)
     playlist_name = user_active_playlists.get(message.from_user.id)
-
     if not playlist_name:
-        return await message.answer("❗ First, use /add <playlist_name> to start adding tracks.")
+        return await message.answer("❗ First, use /add and select a playlist.")
 
+    user_id = db.get_user_id(message.from_user.id)
     success = db.add_track(playlist_name, user_id, message.audio.file_id)
     if success:
-        await message.answer(f"✅ Added to '{playlist_name}'")
+        await message.answer(f"✅ Added to `{playlist_name}`")
     else:
         await message.answer("❌ Failed to add track.")
 
-@dp.message(F.text.startswith("/finish"))
-async def cancel_cmd(message: types.Message):
+@dp.message(F.text == "/finish")
+async def finish_add(message: Message):
     if message.from_user.id in user_active_playlists:
         del user_active_playlists[message.from_user.id]
-        await message.answer("❌ Playlist add session cancelled.")
+        await message.answer("✅ Finished adding music.")
     else:
         await message.answer("ℹ️ No active playlist session.")
 
 
-@dp.message(F.text.startswith("/myplaylists"))
+# ===== Cover Upload =====
+
+@dp.message(F.text == "/setcover")
+async def set_cover_prompt(message: Message):
+    await message.answer("📛 Which playlist do you want to set a cover for? Reply the name to this message.")
+    set_user_state(message.from_user.id, "waiting_set_cover")
+
+@dp.message(F.photo)
+async def handle_cover_upload(message: types.Message):
+    user_id = message.from_user.id
+    if user_id not in pending_cover_uploads:
+        return await message.answer("ℹ️ Use /setcover to choose a playlist first.")
+    
+    playlist_name = pending_cover_uploads.pop(user_id)
+    file_id = message.photo[-1].file_id
+    db.set_cover_image(db.get_user_id(user_id), playlist_name, file_id)
+    await message.answer(f"✅ Cover image set for '{playlist_name}'")
+
+
+# ===== Playlist Info =====
+
+@dp.message(F.text == "/myplaylists")
 async def my_playlists(message: Message):
-    parts = message.text.split(" ")
-    if len(parts) != 1:
-        return await message.answer("Usage: /myplaylists")
     user_id = db.get_user_id(message.from_user.id)
     playlists = db.get_playlists(user_id)
     if not playlists:
-        await message.answer("No playlists yet.")
+        await message.answer("No playlists yet. Use /newplaylist to add one.")
     else:
         await message.answer("🎧 Your playlists:\n" + "\n".join(playlists))
 
-@dp.message(F.text.startswith("/show_playlist"))
-async def show_playlist(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 2:
-        return await message.answer("Usage: /show_playlist <playlist_name>")
+@dp.message(F.text == "/show_playlist")
+async def show_playlist_prompt(message: Message):
+    await message.answer("📂 Reply the name of the playlist to view:")
+    set_user_state(message.from_user.id, "waiting_show_playlist")
+
+# ===== Share, Delete, Rename =====
+
+@dp.message(F.text == "/share")
+async def share_prompt(message: Message):
+    await message.answer("🔗 Reply the name of the playlist to share:")
+    set_user_state(message.from_user.id, "waiting_share")
     
-    playlist_name = parts[1]
-    user_id = db.get_user_id(message.from_user.id)
-    tracks = db.get_tracks(playlist_name, user_id)
+@dp.message(F.text == "/remove_track")
+async def remove_track_prompt(message: Message):
+    await message.answer("🗑 Reply with <playlist_name> <track_index> to remove:")
+    set_user_state(message.from_user.id, "waiting_remove_track")
 
-    if not tracks:
-        return await message.answer("❌ Playlist not found or empty.")
+@dp.message(F.text == "/remove_playlist")
+async def remove_playlist_prompt(message: Message):
+    await message.answer("🗑 Reply with the name of the playlist to delete:")
+    set_user_state(message.from_user.id, "waiting_remove_playlist")
 
-    await message.answer(f"🎧 Showing playlist '{playlist_name}' with {len(tracks)} track(s):")
+@dp.message(F.text == "/rename")
+async def rename_prompt(message: Message):
+    await message.answer("✏️ Reply with: <old_name> <new_name>")
+    set_user_state(message.from_user.id, "waiting_rename")
 
-    # Telegram limit: max 10 media per group
-    BATCH_SIZE = 10
-    for i in range(0, len(tracks), BATCH_SIZE):
-        batch = tracks[i:i + BATCH_SIZE]
-        media = [InputMediaAudio(media=file_id,caption=f"{index+i}") for index,file_id in enumerate(batch)]
-        await message.answer_media_group(media)
-
-@dp.message(F.text.startswith("/share"))
-async def share_cmd(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 2:
-        return await message.answer("Usage: /share <playlist_name>")
-    
-    playlist_name = parts[1]
-    user_id = db.get_user_id(message.from_user.id)
-    playlist_id = db.get_playlist_id_by_name(user_id, playlist_name)
-    
-    if not playlist_id:
-        return await message.answer("❌ Playlist not found.")
-
-    bot_username = (await bot.get_me()).username
-    deep_link = f"https://t.me/{bot_username}?start=share__{playlist_id}"
-    await message.answer(f"🔗 Share this playlist:\n{deep_link}")
-
-@dp.message(F.text.startswith("/setcover"))
-async def set_cover_cmd(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 2:
-        return await message.answer("Usage: /setcover <playlist_name>")
-    
-    playlist_name = parts[1]
-    user_id = db.get_user_id(message.from_user.id)
-    playlists = db.get_playlists(user_id)
-    if playlist_name not in playlists:
-        return await message.answer("❌ Playlist not found.")
-    
-    pending_cover_uploads[message.from_user.id] = playlist_name
-    await message.answer("📸 Now send a photo to set as cover image.")
-
-@dp.message(F.photo)
-async def handle_photo(message: types.Message):
-    user_id = message.from_user.id
-    if user_id not in pending_cover_uploads:
-        return await message.answer("ℹ️ No playlist selected. Use /setcover <playlist_name> first.")
-
-    playlist_name = pending_cover_uploads.pop(user_id)
-    file_id = message.photo[-1].file_id  # highest resolution
-
-    db.set_cover_image(user_id, playlist_name, file_id)
-    await message.answer(f"✅ Cover image set for playlist '{playlist_name}'")
-
-@dp.message(F.text.startswith("/remove_track"))
-async def remove_track_cmd(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 3:
-        return await message.answer("Usage: /remove_track <playlist_name> <track_index>")
-
-    playlist_name = parts[1]
-    try:
-        index = int(parts[2])
-    except ValueError:
-        return await message.answer("❌ Invalid track index.")
+# ==== Handle Replies ====
+@dp.message(F.text, F.reply_to_message)
+async def handle_replies(message: Message):
+    state = get_user_state(message.from_user.id)
+    if not state:
+        return await message.answer(f"You have no active command. type / to get hint :)")
 
     user_id = db.get_user_id(message.from_user.id)
-    success = db.remove_track_by_index(user_id, playlist_name, index)
+    text = message.text.strip()
 
-    if success:
-        await message.answer(f"✅ Track #{index} removed from '{playlist_name}'.")
-    else:
-        await message.answer("❌ Track or playlist not found.")
+    if state["state"] == "waiting_playlist_name":
+        name = text
+        success = db.create_playlist(user_id, name)
+        clear_user_state(message.from_user.id)
+        if success:
+            return await message.answer(f"✅ Playlist `{name}` created!")
+        else:
+            return await message.answer(f"⚠️ Playlist `{name}` already exists.")
 
-@dp.message(F.text.startswith("/remove_playlist"))
-async def remove_playlist_cmd(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 2:
-        return await message.answer("Usage: /remove_playlist <playlist_name>")
+    elif state["state"] == "waiting_add_playlist":
+        playlist_name = text
+        playlists = db.get_playlists(user_id)
+        if playlist_name not in playlists:
+            clear_user_state(message.from_user.id)
+            return await message.answer(f"❌ `{playlist_name}` playlist not found.")
+        user_active_playlists[message.from_user.id] = playlist_name
+        clear_user_state(message.from_user.id)
+        return await message.answer(f"🎵 You're now adding music to `{playlist_name}`. Send audio files. Use /finish when done.")
+
+    elif state["state"] == "waiting_set_cover":
+        playlist_name = text
+        playlists = db.get_playlists(user_id)
+        if playlist_name not in playlists:
+            clear_user_state(message.from_user.id)
+            return await message.answer(f"❌ `{playlist_name}` playlist not found.")
+        pending_cover_uploads[message.from_user.id] = playlist_name
+        clear_user_state(message.from_user.id)
+        return await message.answer(f"📸 Now send a photo to set as cover image for `{playlist_name}` playlist.")
+
+    elif state["state"] == "waiting_remove_track":
+        text_list = text.split(" ")
+        if len(text_list) != 2:
+            clear_user_state(message.from_user.id)
+            return await message.answer("❌ Invalid input. Usage: <playlist_name> <index>. Fetch Indices using /show_playlist command.")
+        
+        playlist_name, index = text_list
+
+        if not index.isdecimal():
+            clear_user_state(message.from_user.id)
+            return await message.answer(f"❌ Invalid index. Index should be number but `{index}` given.")
+
+        index = int(index)
+        success = db.remove_track_by_index(user_id, playlist_name, index)
+        clear_user_state(message.from_user.id)
+        if success:
+            return await message.answer(f"✅ Track #{index} removed from '{playlist_name}'.")
+        else:
+            return await message.answer("❌ Track or playlist not found.")
+            
+    elif state["state"] == "waiting_remove_playlist":
+        playlist_name = text
+        success = db.delete_playlist(user_id, playlist_name)
+        clear_user_state(message.from_user.id)
+        if success:
+            return await message.answer(f"🗑 Playlist '{playlist_name}' deleted.")
+        else:
+            return await message.answer("❌ Playlist not found.")
+
+    elif state["state"] == "waiting_rename":
+        text_list = text.split(" ")
+        if len(text_list) != 2:
+            clear_user_state(message.from_user.id)
+            return await message.answer("❌ Invalid input. Usage: <old_name> <new_name>")
+
+        old_name , new_name = text_list
+
+        old_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,old_name)
+        if not old_playlist_exists:
+            clear_user_state(message.from_user.id)
+            return await message.answer(f"❌ Invalid Playlist. Playlist `{old_name}` not exists")
+
+        new_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,new_name)
+        if not new_playlist_exists:
+            clear_user_state(message.from_user.id)
+            return await message.answer(f"❌ `{new_name}` already exists, can't rename.")
+
+        db.rename_playlist(user_id, old_name, new_name)
+        clear_user_state(message.from_user.id)
+        return await message.answer(f"✅ Playlist renamed from '{old_name}' to '{new_name}'.")
     
-    playlist_name = parts[1]
-    user_id = db.get_user_id(message.from_user.id)
-    success = db.delete_playlist(user_id, playlist_name)
-    if success:
-        await message.answer(f"🗑 Playlist '{playlist_name}' deleted.")
-    else:
-        await message.answer("❌ Playlist not found.")
+    elif state["state"] == "waiting_show_playlist":
+        playlist_name = message.text.strip()
+        user_id = db.get_user_id(message.from_user.id)
+        tracks = db.get_tracks(playlist_name, user_id)
+        clear_user_state(message.from_user.id)
 
-@dp.message(F.text.startswith("/rename"))
-async def rename_cmd(message: types.Message):
-    parts = message.text.split(" ")
-    if len(parts) != 3:
-        return await message.answer("Usage: /rename <old_name> <new_name>")
+        if not tracks:
+            return await message.answer("❌ Playlist not found or empty.")
+        await message.answer(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks:")
+
+        for i in range(0, len(tracks), 10):
+            batch = tracks[i:i + 10]
+            media = [InputMediaAudio(media=file_id,caption=f"Index: {i+index}") for index,file_id in enumerate(batch)]
+            await message.answer_media_group(media)
     
-    old_name, new_name = parts[1], parts[2]
-    user_id = db.get_user_id(message.from_user.id)
-    success = db.rename_playlist(user_id, old_name, new_name)
+    elif state["state"] == "waiting_share":
+        playlist_name = message.text.strip()
+        user_id = db.get_user_id(message.from_user.id)
+        playlist_id = db.get_playlist_id_by_name(user_id, playlist_name)
+        clear_user_state(message.from_user.id)
 
-    if success:
-        await message.answer(f"✅ Playlist renamed from '{old_name}' to '{new_name}'.")
-    else:
-        await message.answer("❌ Rename failed. Maybe the new name exists or playlist not found.")
+        if not playlist_id:
+            return await message.answer("❌ Playlist not found.")
+
+        bot_username = (await bot.get_me()).username
+        link = f"https://t.me/{bot_username}?start=share__{playlist_id}"
+        await message.answer(f"🔗 Share this link:\n{link}")
+
+# ===== Main Runner =====
 
 async def main():
     await dp.start_polling(bot)

@@ -107,9 +107,6 @@ def delete_playlist(user_id, playlist_name):
     return True
 
 def rename_playlist(user_id, old_name, new_name):
-    try:
-        cur.execute("UPDATE playlists SET name=? WHERE user_id=? AND name=?", (new_name, user_id, old_name))
-        conn.commit()
-        return cur.rowcount > 0
-    except sqlite3.IntegrityError:
-        return False  # Duplicate name
+    cur.execute("UPDATE playlists SET name=? WHERE user_id=? AND name=?", (new_name, user_id, old_name))
+    conn.commit()
+    return True
