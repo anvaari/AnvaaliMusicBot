@@ -3,3 +3,5 @@
 .vevn
 .vscode
 .env
+playlist.db
+__pycache__
