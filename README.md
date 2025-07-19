@@ -7,8 +7,8 @@ A Telegram bot that allows users to create, manage, and share music playlists ma
 ## ✨ Features
 
 - `/add <playlist_name>` – Start adding audio files to a playlist.
-- `/cancel` – Cancel current adding session.
-- `/show_playlists` – List your playlists.
+- `/finish` – Cancel current adding session.
+- `/myplaylists` – List your playlists.
 - `/show_playlist <playlist_name>` – View all tracks in a playlist (sent as a media group).
 - `/share <playlist_name>` – Share a playlist link that previews it to others.
 - `/remove_track <playlist_name> <index>` – Remove a track from a playlist by index.
@@ -39,10 +39,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ````
 
-### 2. Fill in your `config.py`
+### 2. set BOT_TOKEN as environment. Use @BotFather to create one
 
-```python
-BOT_TOKEN = "your_telegram_bot_token_here"
+```bash
+echo "BOT_TOKEN = \"your_telegram_bot_token_here\" " > .env
 ```
 
 ### 3. Run the Bot
@@ -74,18 +74,6 @@ playlist-bot/
 
 ---
 
-## 📌 To Do (Next Phase)
-
-[] Add `/edit_title` to include playlist descriptions
-[] Clone/copy playlists via `/copy <playlist_id>`
-[] Add support for external streaming (Tidal, YouTube, etc.)
-[] Integrate TON wallet login and minting via TonConnect
-[] NFT Minting per playlist via TON smart contracts
-
----
-
 ## 📬 Contributing
 
 Feel free to fork, extend, or raise PRs. Ideas welcome.
-
-
