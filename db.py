@@ -1,7 +1,15 @@
-import sqlite3
 
-conn = sqlite3.connect("playlist.db")
-cur = conn.cursor()
+import sqlite3
+from utils import get_logger
+
+logger = get_logger("db")
+
+try:
+    conn = sqlite3.connect("playlist.db")
+    cur = conn.cursor()
+except Exception as e:
+    logger.error(f"Database connection failed: {e}")
+    raise
 
 def init_db():
     cur.execute("""CREATE TABLE IF NOT EXISTS users (
@@ -23,13 +31,20 @@ def init_db():
     conn.commit()
 
 def add_user(telegram_id):
-    cur.execute("INSERT OR IGNORE INTO users (telegram_id) VALUES (?)", (telegram_id,))
-    conn.commit()
+    try:
+        cur.execute("INSERT OR IGNORE INTO users (telegram_id) VALUES (?)", (telegram_id,))
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to add user {telegram_id}: {e}")
 
 def get_user_id(telegram_id):
-    cur.execute("SELECT id FROM users WHERE telegram_id=?", (telegram_id,))
-    res = cur.fetchone()
-    return res[0] if res else None
+    try:
+        cur.execute("SELECT id FROM users WHERE telegram_id=?", (telegram_id,))
+        res = cur.fetchone()
+        return res[0] if res else None
+    except Exception as e:
+        logger.error(f"Failed to get user id for {telegram_id}: {e}")
+        return None
 
 def create_playlist(user_id, name):
     try:
@@ -37,21 +52,34 @@ def create_playlist(user_id, name):
         conn.commit()
         return True
     except sqlite3.IntegrityError:
+        logger.warning(f"Playlist already exists for user {user_id}: {name}")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to create playlist {name} for user {user_id}: {e}")
         return False
 
 def add_track(playlist_name, user_id, file_id):
-    cur.execute("SELECT id FROM playlists WHERE name=? AND user_id=?", (playlist_name, user_id))
-    res = cur.fetchone()
-    if not res:
+    try:
+        cur.execute("SELECT id FROM playlists WHERE name=? AND user_id=?", (playlist_name, user_id))
+        res = cur.fetchone()
+        if not res:
+            logger.warning(f"Playlist not found: {playlist_name} for user {user_id}")
+            return False
+        playlist_id = res[0]
+        cur.execute("INSERT INTO tracks (playlist_id, file_id) VALUES (?, ?)", (playlist_id, file_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to add track to playlist {playlist_name} for user {user_id}: {e}")
         return False
-    playlist_id = res[0]
-    cur.execute("INSERT INTO tracks (playlist_id, file_id) VALUES (?, ?)", (playlist_id, file_id))
-    conn.commit()
-    return True
 
 def get_playlists(user_id):
-    cur.execute("SELECT name FROM playlists WHERE user_id=?", (user_id,))
-    return [row[0] for row in cur.fetchall()]
+    try:
+        cur.execute("SELECT name FROM playlists WHERE user_id=?", (user_id,))
+        return [row[0] for row in cur.fetchall()]
+    except Exception as e:
+        logger.error(f"Failed to get playlists for user {user_id}: {e}")
+        return []
 
 def get_tracks(playlist_name, user_id):
     cur.execute("""

@@ -64,12 +64,14 @@ python bot.py
 ## 📂 Project Structure
 
 ```
-playlist-bot/
-├── bot.py          # Main bot logic (aiogram)
-├── db.py           # SQLite database functions
-├── config.py       # Secrets (BOT_TOKEN)
-├── README.md
-└── requirements.txt
+AnvaaliMusicBot/
+├── bot.py          # Main bot logic and commands (aiogram)
+├── db.py           # SQLite database functions with error handling and logging
+├── config.py       # Loads environment variables, bot token, and logging level
+├── utils.py        # Utility functions (e.g., logger setup)
+├── test_utils.py   # Unit tests for utils.py
+├── README.md       # Project documentation
+└── requirements.txt# Python dependencies
 ```
 
 ---
