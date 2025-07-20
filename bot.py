@@ -2,6 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Message, InputMediaAudio
 from config import app_config
+from logging_config import logger
 import db
 
 db.init_db()
@@ -27,6 +28,7 @@ def get_user_state(user_id):
 
 @dp.message(F.text.startswith("/start"))
 async def start_cmd(message: types.Message):
+    logger.info(f"User {message.from_user.full_name} started the bot")
     db.add_user(message.from_user.id)
     if message.text.strip() == "/start":
         return await message.answer("Welcome to Playlist Bot! Use /newplaylist to create your first playlist.")
@@ -183,9 +185,11 @@ async def handle_replies(message: Message):
         name = text
         success = db.create_playlist(user_id, name)
         clear_user_state(message.from_user.id)
+        logger.debug(f"User {message.from_user.id} created playlist '{name}'")
         if success:
             return await message.answer(f"✅ Playlist `{name}` created!")
         else:
+            logger.warning(f"User {message.from_user.id} failed to create playlist '{name}' (already exists)")
             return await message.answer(f"⚠️ Playlist `{name}` already exists.")
 
     elif state["state"] == "waiting_add_playlist":
@@ -193,9 +197,11 @@ async def handle_replies(message: Message):
         playlists = db.get_playlists(user_id)
         if playlist_name not in playlists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to add to non-existent playlist '{playlist_name}'")
             return await message.answer(f"❌ `{playlist_name}` playlist not found.")
         user_active_playlists[message.from_user.id] = playlist_name
         clear_user_state(message.from_user.id)
+        logger.info(f"User {message.from_user.id} started adding music to '{playlist_name}'")
         return await message.answer(f"🎵 You're now adding music to `{playlist_name}`. Send audio files. Use /finish when done.")
 
     elif state["state"] == "waiting_set_cover":
@@ -203,29 +209,35 @@ async def handle_replies(message: Message):
         playlists = db.get_playlists(user_id)
         if playlist_name not in playlists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to set cover for non-existent playlist '{playlist_name}'")
             return await message.answer(f"❌ `{playlist_name}` playlist not found.")
         pending_cover_uploads[message.from_user.id] = playlist_name
         clear_user_state(message.from_user.id)
+        logger.info(f"User {message.from_user.id} is setting a cover for '{playlist_name}'")
         return await message.answer(f"📸 Now send a photo to set as cover image for `{playlist_name}` playlist.")
 
     elif state["state"] == "waiting_remove_track":
         text_list = text.split(" ")
         if len(text_list) != 2:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} provided invalid input for remove_track: '{text}'")
             return await message.answer("❌ Invalid input. Usage: <playlist_name> <index>. Fetch Indices using /show_playlist command.")
         
         playlist_name, index = text_list
 
         if not index.isdecimal():
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} provided invalid index for remove_track: '{index}'")
             return await message.answer(f"❌ Invalid index. Index should be number but `{index}` given.")
 
         index = int(index)
         success = db.remove_track_by_index(user_id, playlist_name, index)
         clear_user_state(message.from_user.id)
         if success:
+            logger.info(f"User {message.from_user.id} removed track #{index} from '{playlist_name}'")
             return await message.answer(f"✅ Track #{index} removed from '{playlist_name}'.")
         else:
+            logger.warning(f"User {message.from_user.id} failed to remove track #{index} from '{playlist_name}' (not found)")
             return await message.answer("❌ Track or playlist not found.")
             
     elif state["state"] == "waiting_remove_playlist":
@@ -233,14 +245,17 @@ async def handle_replies(message: Message):
         success = db.delete_playlist(user_id, playlist_name)
         clear_user_state(message.from_user.id)
         if success:
+            logger.info(f"User {message.from_user.id} deleted playlist '{playlist_name}'")
             return await message.answer(f"🗑 Playlist '{playlist_name}' deleted.")
         else:
+            logger.warning(f"User {message.from_user.id} failed to delete playlist '{playlist_name}' (not found)")
             return await message.answer("❌ Playlist not found.")
 
     elif state["state"] == "waiting_rename":
         text_list = text.split(" ")
         if len(text_list) != 2:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} provided invalid input for rename: '{text}'")
             return await message.answer("❌ Invalid input. Usage: <old_name> <new_name>")
 
         old_name , new_name = text_list
@@ -248,15 +263,18 @@ async def handle_replies(message: Message):
         old_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,old_name)
         if not old_playlist_exists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to rename non-existent playlist '{old_name}'")
             return await message.answer(f"❌ Invalid Playlist. Playlist `{old_name}` not exists")
 
         new_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,new_name)
         if not new_playlist_exists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to rename to existing playlist '{new_name}'")
             return await message.answer(f"❌ `{new_name}` already exists, can't rename.")
 
         db.rename_playlist(user_id, old_name, new_name)
         clear_user_state(message.from_user.id)
+        logger.info(f"User {message.from_user.id} renamed playlist '{old_name}' to '{new_name}'")
         return await message.answer(f"✅ Playlist renamed from '{old_name}' to '{new_name}'.")
     
     elif state["state"] == "waiting_show_playlist":
@@ -266,7 +284,9 @@ async def handle_replies(message: Message):
         clear_user_state(message.from_user.id)
 
         if not tracks:
+            logger.warning(f"User {message.from_user.id} tried to show non-existent or empty playlist '{playlist_name}'")
             return await message.answer("❌ Playlist not found or empty.")
+        logger.info(f"User {message.from_user.id} is viewing playlist '{playlist_name}'")
         await message.answer(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks:")
 
         for i in range(0, len(tracks), 10):
@@ -281,15 +301,18 @@ async def handle_replies(message: Message):
         clear_user_state(message.from_user.id)
 
         if not playlist_id:
+            logger.warning(f"User {message.from_user.id} tried to share non-existent playlist '{playlist_name}'")
             return await message.answer("❌ Playlist not found.")
 
         bot_username = (await bot.get_me()).username
         link = f"https://t.me/{bot_username}?start=share__{playlist_id}"
+        logger.info(f"User {message.from_user.id} shared playlist '{playlist_name}'")
         await message.answer(f"🔗 Share this link:\n{link}")
 
 # ===== Main Runner =====
 
 async def main():
+    logger.info("Starting bot")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
