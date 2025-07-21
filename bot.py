@@ -267,7 +267,8 @@ async def handle_replies(message: Message):
             return await message.answer(f"❌ Invalid Playlist. Playlist `{old_name}` not exists")
 
         new_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,new_name)
-        if not new_playlist_exists:
+        new_playlist_exists = db.get_playlist_id_by_name(message.from_user.id, new_name)
+        if new_playlist_exists:
             clear_user_state(message.from_user.id)
             logger.warning(f"User {message.from_user.id} tried to rename to existing playlist '{new_name}'")
             return await message.answer(f"❌ `{new_name}` already exists, can't rename.")
