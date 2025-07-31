@@ -27,6 +27,11 @@ def clear_user_state(user_id):
 def get_user_state(user_id):
     return user_states.get(user_id)
 
+### Commands
+commands = [
+    "/start", "/add", "/finish", "/myplaylists", "/show_playlist",
+    "/share", "/remove_track", "/remove_playlist", "/rename", "/setcover", "/newplaylist"
+]   
 
 @dp.message(F.text.startswith("/start"))
 async def start_cmd(message: types.Message):
@@ -70,14 +75,34 @@ async def start_cmd(message: types.Message):
 
 # ==== Handle wrong command ====
 
-@dp.message(lambda message: message.reply_to_message is None and  message.text.startswith('/') and not message.text.split()[0] in [
-    "/start", "/add", "/finish", "/myplaylists", "/show_playlist",
-    "/share", "/remove_track", "/remove_playlist", "/rename", "/setcover", "/newplaylist"
-])
+def wrong_command_detector(message):
+    if not message.text:
+        logger.debug("Sent message has no text")
+        return False
+    check_is_command = message.text.startswith('/')
+    check_wrong_command = not message.text.split()[0] in commands
+    check_not_reply = message.reply_to_message is None 
+    if check_is_command and check_wrong_command and check_not_reply:
+        return True
+    else:
+        return False
+
+def bad_message_detector(message):
+    if not message.text:
+        logger.debug("Sent message has no text")
+        return False
+    check_not_reply = message.reply_to_message is None  
+    check_not_command = not message.text.startswith('/')
+    if check_not_reply and check_not_command:
+        return True
+    else:
+        return False
+
+@dp.message(lambda message:wrong_command_detector(message))
 async def unknown_command(message: types.Message):
     await message.reply("❌ Unknown command. Type `/` to get hint :)")
 
-@dp.message(lambda message: message.reply_to_message is None and not message.text.startswith('/'))
+@dp.message(lambda message: bad_message_detector(message))
 async def bad_message(message: types.Message):
     if get_user_state(message.from_user.id):
         await message.reply("❌ You should interact with reply, don't send orphan message :D ")
