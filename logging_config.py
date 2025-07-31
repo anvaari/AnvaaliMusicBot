@@ -25,7 +25,9 @@ def get_logger(logger_name:str):
 
     handler = logging.StreamHandler(sys.stdout)
     formatter = EmojiFormatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(levelname)s "
+        "in %(filename)s at line %(lineno)d: "
+        "%(message)s"
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
