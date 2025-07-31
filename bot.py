@@ -72,7 +72,7 @@ async def start_cmd(message: types.Message):
 
 @dp.message(lambda message: message.reply_to_message is None and  message.text.startswith('/') and not message.text.split()[0] in [
     "/start", "/add", "/finish", "/myplaylists", "/show_playlist",
-    "/share", "/remove_track", "/remove_playlist", "/rename", "/set_cover", "/newplaylist"
+    "/share", "/remove_track", "/remove_playlist", "/rename", "/setcover", "/newplaylist"
 ])
 async def unknown_command(message: types.Message):
     await message.reply("❌ Unknown command. Type `/` to get hint :)")
