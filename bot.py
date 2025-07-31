@@ -326,13 +326,22 @@ async def handle_replies(message: Message):
         playlist_name = message.text.strip()
         user_id = db.get_user_id(message.from_user.id)
         tracks = db.get_tracks(playlist_name, user_id)
+
+        playlist_id = db.get_playlist_id_by_name(user_id,playlist_name)
+        if not playlist_id:
+            await message.answer(f"❌ {playlist_name} Playlist not found.")
+        playlist_cover_file_id = db.get_cover_image_by_playlist_id(playlist_id)
         clear_user_state(message.from_user.id)
 
         if not tracks:
             logger.warning(f"User {message.from_user.id} tried to show non-existent or empty playlist '{playlist_name}'")
-            return await message.answer("❌ Playlist not found or empty.")
+            return await message.answer(f"❌ {playlist_name} Playlist is empty.")
         logger.info(f"User {message.from_user.id} is viewing playlist '{playlist_name}'")
-        await message.answer(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks:")
+
+        if playlist_cover_file_id:
+            await message.answer_photo(playlist_cover_file_id,caption=f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks")
+        else:
+            await message.answer(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks")
 
         for i in range(0, len(tracks), 10):
             batch = tracks[i:i + 10]
