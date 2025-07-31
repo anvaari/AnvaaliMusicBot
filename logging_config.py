@@ -1,5 +1,6 @@
 import logging
 from config import app_config
+import sys
 
 class EmojiFormatter(logging.Formatter):
     level_emojis = {
@@ -22,7 +23,7 @@ def get_logger(logger_name:str):
     logger = logging.getLogger(logger_name)
     logger.setLevel(app_config.LOG_LEVEL)
 
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(sys.stdout)
     formatter = EmojiFormatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -30,5 +31,3 @@ def get_logger(logger_name:str):
     logger.addHandler(handler)
 
     return logger
-
-logger = setup_logging()
