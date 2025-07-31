@@ -28,7 +28,7 @@ def get_user_state(user_id):
 
 @dp.message(F.text.startswith("/start"))
 async def start_cmd(message: types.Message):
-    logger.info(f"User {message.from_user.full_name} started the bot")
+    logger.info(f"User {message.from_user.id} started the bot")
     db.add_user(message.from_user.id)
     if message.text.strip() == "/start":
         return await message.answer("Welcome to Playlist Bot! Use /newplaylist to create your first playlist.")
