@@ -30,6 +30,11 @@ def get_user_state(user_id):
 
 @dp.message(F.text.startswith("/start"))
 async def start_cmd(message: types.Message):
+    """
+    Handles the /start command, registering the user and optionally delivering a shared playlist via deep-link.
+    
+    If invoked as a plain /start, sends a welcome message. If invoked with a deep-link containing a shared playlist ID, retrieves and sends the playlist's tracks and cover image to the user.
+    """
     logger.info(f"User {message.from_user.id} started the bot")
     db.add_user(message.from_user.id)
     if message.text.strip() == "/start":
@@ -125,6 +130,11 @@ async def set_cover_prompt(message: Message):
 
 @dp.message(F.photo)
 async def handle_cover_upload(message: types.Message):
+    """
+    Handles photo uploads to set a cover image for a user's playlist.
+    
+    If the user has initiated a cover image upload for a playlist, sets the uploaded photo as the cover image. Informs the user of success or failure. If no cover upload is pending, prompts the user to use /setcover first.
+    """
     user_id = message.from_user.id
     if user_id not in pending_cover_uploads:
         return await message.answer("ℹ️ Use /setcover to choose a playlist first.")
@@ -179,6 +189,11 @@ async def rename_prompt(message: Message):
 # ==== Handle Replies ====
 @dp.message(F.text, F.reply_to_message)
 async def handle_replies(message: Message):
+    """
+    Processes user reply messages based on their current interaction state to manage playlists.
+    
+    Depending on the user's state, this handler creates playlists, sets active playlists for adding tracks, initiates cover image uploads, removes tracks or playlists, renames playlists, displays playlist contents, or generates shareable links. It validates user input, provides feedback, and clears the user's state after each operation.
+    """
     state = get_user_state(message.from_user.id)
     if not state:
         return await message.answer(f"You have no active command. type / to get hint :)")
@@ -318,6 +333,9 @@ async def handle_replies(message: Message):
 # ===== Main Runner =====
 
 async def main():
+    """
+    Starts the Telegram bot and begins polling for updates asynchronously.
+    """
     logger.info("Starting bot")
     await dp.start_polling(bot)
 
