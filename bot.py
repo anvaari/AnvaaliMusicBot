@@ -2,7 +2,10 @@ import asyncio
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Message, InputMediaAudio
 from config import app_config
+from logging_config import get_logger
 import db
+
+logger = get_logger(__name__)
 
 db.init_db()
 
@@ -27,6 +30,12 @@ def get_user_state(user_id):
 
 @dp.message(F.text.startswith("/start"))
 async def start_cmd(message: types.Message):
+    """
+    Handles the /start command, registering the user and optionally delivering a shared playlist via deep-link.
+    
+    If invoked as a plain /start, sends a welcome message. If invoked with a deep-link containing a shared playlist ID, retrieves and sends the playlist's tracks and cover image to the user.
+    """
+    logger.info(f"User {message.from_user.id} started the bot")
     db.add_user(message.from_user.id)
     if message.text.strip() == "/start":
         return await message.answer("Welcome to Playlist Bot! Use /newplaylist to create your first playlist.")
@@ -121,14 +130,22 @@ async def set_cover_prompt(message: Message):
 
 @dp.message(F.photo)
 async def handle_cover_upload(message: types.Message):
+    """
+    Handles photo uploads to set a cover image for a user's playlist.
+    
+    If the user has initiated a cover image upload for a playlist, sets the uploaded photo as the cover image. Informs the user of success or failure. If no cover upload is pending, prompts the user to use /setcover first.
+    """
     user_id = message.from_user.id
     if user_id not in pending_cover_uploads:
         return await message.answer("ℹ️ Use /setcover to choose a playlist first.")
     
     playlist_name = pending_cover_uploads.pop(user_id)
     file_id = message.photo[-1].file_id
-    db.set_cover_image(db.get_user_id(user_id), playlist_name, file_id)
-    await message.answer(f"✅ Cover image set for '{playlist_name}'")
+    cover_set = db.set_cover_image(db.get_user_id(user_id), playlist_name, file_id)
+    if cover_set:
+        await message.answer(f"✅ Cover image set for '{playlist_name}'")
+    else:
+        await message.answer(f"❌ Failed to set image for '{playlist_name}'")
 
 
 # ===== Playlist Info =====
@@ -172,6 +189,11 @@ async def rename_prompt(message: Message):
 # ==== Handle Replies ====
 @dp.message(F.text, F.reply_to_message)
 async def handle_replies(message: Message):
+    """
+    Processes user reply messages based on their current interaction state to manage playlists.
+    
+    Depending on the user's state, this handler creates playlists, sets active playlists for adding tracks, initiates cover image uploads, removes tracks or playlists, renames playlists, displays playlist contents, or generates shareable links. It validates user input, provides feedback, and clears the user's state after each operation.
+    """
     state = get_user_state(message.from_user.id)
     if not state:
         return await message.answer(f"You have no active command. type / to get hint :)")
@@ -183,9 +205,11 @@ async def handle_replies(message: Message):
         name = text
         success = db.create_playlist(user_id, name)
         clear_user_state(message.from_user.id)
+        logger.debug(f"User {message.from_user.id} created playlist '{name}'")
         if success:
             return await message.answer(f"✅ Playlist `{name}` created!")
         else:
+            logger.warning(f"User {message.from_user.id} failed to create playlist '{name}' (already exists)")
             return await message.answer(f"⚠️ Playlist `{name}` already exists.")
 
     elif state["state"] == "waiting_add_playlist":
@@ -193,9 +217,11 @@ async def handle_replies(message: Message):
         playlists = db.get_playlists(user_id)
         if playlist_name not in playlists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to add to non-existent playlist '{playlist_name}'")
             return await message.answer(f"❌ `{playlist_name}` playlist not found.")
         user_active_playlists[message.from_user.id] = playlist_name
         clear_user_state(message.from_user.id)
+        logger.info(f"User {message.from_user.id} started adding music to '{playlist_name}'")
         return await message.answer(f"🎵 You're now adding music to `{playlist_name}`. Send audio files. Use /finish when done.")
 
     elif state["state"] == "waiting_set_cover":
@@ -203,29 +229,35 @@ async def handle_replies(message: Message):
         playlists = db.get_playlists(user_id)
         if playlist_name not in playlists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to set cover for non-existent playlist '{playlist_name}'")
             return await message.answer(f"❌ `{playlist_name}` playlist not found.")
         pending_cover_uploads[message.from_user.id] = playlist_name
         clear_user_state(message.from_user.id)
+        logger.info(f"User {message.from_user.id} is setting a cover for '{playlist_name}'")
         return await message.answer(f"📸 Now send a photo to set as cover image for `{playlist_name}` playlist.")
 
     elif state["state"] == "waiting_remove_track":
         text_list = text.split(" ")
         if len(text_list) != 2:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} provided invalid input for remove_track: '{text}'")
             return await message.answer("❌ Invalid input. Usage: <playlist_name> <index>. Fetch Indices using /show_playlist command.")
         
         playlist_name, index = text_list
 
         if not index.isdecimal():
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} provided invalid index for remove_track: '{index}'")
             return await message.answer(f"❌ Invalid index. Index should be number but `{index}` given.")
 
         index = int(index)
         success = db.remove_track_by_index(user_id, playlist_name, index)
         clear_user_state(message.from_user.id)
         if success:
+            logger.info(f"User {message.from_user.id} removed track #{index} from '{playlist_name}'")
             return await message.answer(f"✅ Track #{index} removed from '{playlist_name}'.")
         else:
+            logger.warning(f"User {message.from_user.id} failed to remove track #{index} from '{playlist_name}' (not found)")
             return await message.answer("❌ Track or playlist not found.")
             
     elif state["state"] == "waiting_remove_playlist":
@@ -233,14 +265,17 @@ async def handle_replies(message: Message):
         success = db.delete_playlist(user_id, playlist_name)
         clear_user_state(message.from_user.id)
         if success:
+            logger.info(f"User {message.from_user.id} deleted playlist '{playlist_name}'")
             return await message.answer(f"🗑 Playlist '{playlist_name}' deleted.")
         else:
+            logger.warning(f"User {message.from_user.id} failed to delete playlist '{playlist_name}' (not found)")
             return await message.answer("❌ Playlist not found.")
 
     elif state["state"] == "waiting_rename":
         text_list = text.split(" ")
         if len(text_list) != 2:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} provided invalid input for rename: '{text}'")
             return await message.answer("❌ Invalid input. Usage: <old_name> <new_name>")
 
         old_name , new_name = text_list
@@ -248,15 +283,18 @@ async def handle_replies(message: Message):
         old_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,old_name)
         if not old_playlist_exists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to rename non-existent playlist '{old_name}'")
             return await message.answer(f"❌ Invalid Playlist. Playlist `{old_name}` not exists")
 
-        new_playlist_exists = db.get_playlist_id_by_name(message.from_user.id,new_name)
-        if not new_playlist_exists:
+        new_playlist_exists = db.get_playlist_id_by_name(message.from_user.id, new_name)
+        if new_playlist_exists:
             clear_user_state(message.from_user.id)
+            logger.warning(f"User {message.from_user.id} tried to rename to existing playlist '{new_name}'")
             return await message.answer(f"❌ `{new_name}` already exists, can't rename.")
 
         db.rename_playlist(user_id, old_name, new_name)
         clear_user_state(message.from_user.id)
+        logger.info(f"User {message.from_user.id} renamed playlist '{old_name}' to '{new_name}'")
         return await message.answer(f"✅ Playlist renamed from '{old_name}' to '{new_name}'.")
     
     elif state["state"] == "waiting_show_playlist":
@@ -266,7 +304,9 @@ async def handle_replies(message: Message):
         clear_user_state(message.from_user.id)
 
         if not tracks:
+            logger.warning(f"User {message.from_user.id} tried to show non-existent or empty playlist '{playlist_name}'")
             return await message.answer("❌ Playlist not found or empty.")
+        logger.info(f"User {message.from_user.id} is viewing playlist '{playlist_name}'")
         await message.answer(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks:")
 
         for i in range(0, len(tracks), 10):
@@ -281,15 +321,21 @@ async def handle_replies(message: Message):
         clear_user_state(message.from_user.id)
 
         if not playlist_id:
+            logger.warning(f"User {message.from_user.id} tried to share non-existent playlist '{playlist_name}'")
             return await message.answer("❌ Playlist not found.")
 
         bot_username = (await bot.get_me()).username
         link = f"https://t.me/{bot_username}?start=share__{playlist_id}"
+        logger.info(f"User {message.from_user.id} shared playlist '{playlist_name}'")
         await message.answer(f"🔗 Share this link:\n{link}")
 
 # ===== Main Runner =====
 
 async def main():
+    """
+    Starts the Telegram bot and begins polling for updates asynchronously.
+    """
+    logger.info("Starting bot")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
