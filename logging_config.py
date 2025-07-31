@@ -12,8 +12,11 @@ class EmojiFormatter(logging.Formatter):
 
     def format(self, record):
         emoji = self.level_emojis.get(record.levelno, "")
-        record.msg = f"{emoji} {record.msg}"
-        return super().format(record)
+        original_msg = record.getMessage()
+        record.msg = f"{emoji} {original_msg}"
+        formatted = super().format(record)
+        record.msg = original_msg  # Restore original message
+        return formatted
 
 def setup_logging():
     logger = logging.getLogger("anvaali")
