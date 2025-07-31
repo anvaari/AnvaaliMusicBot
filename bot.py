@@ -131,8 +131,11 @@ async def handle_cover_upload(message: types.Message):
     
     playlist_name = pending_cover_uploads.pop(user_id)
     file_id = message.photo[-1].file_id
-    db.set_cover_image(db.get_user_id(user_id), playlist_name, file_id)
-    await message.answer(f"✅ Cover image set for '{playlist_name}'")
+    cover_set = db.set_cover_image(db.get_user_id(user_id), playlist_name, file_id)
+    if cover_set:
+        await message.answer(f"✅ Cover image set for '{playlist_name}'")
+    else:
+        await message.answer(f"❌ Failed to set image for '{playlist_name}'")
 
 
 # ===== Playlist Info =====
