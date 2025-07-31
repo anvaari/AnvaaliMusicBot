@@ -18,8 +18,8 @@ class EmojiFormatter(logging.Formatter):
         record.msg = original_msg  # Restore original message
         return formatted
 
-def setup_logging():
-    logger = logging.getLogger("anvaali")
+def get_logger(logger_name:str):
+    logger = logging.getLogger(logger_name)
     logger.setLevel(app_config.LOG_LEVEL)
 
     handler = logging.StreamHandler()
