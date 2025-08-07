@@ -1,5 +1,5 @@
 import sqlite3
-from utils import get_logger
+from utils.logging import get_logger
 from config import app_config
 from os.path import join as path_join
 

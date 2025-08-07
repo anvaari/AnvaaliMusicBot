@@ -2,7 +2,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Message, InputMediaAudio
 from config import app_config
-from utils import get_logger
+from utils.logging import get_logger
 from database import db
 
 logger = get_logger(__name__)
