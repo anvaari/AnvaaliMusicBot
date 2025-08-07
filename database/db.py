@@ -1,10 +1,12 @@
 import sqlite3
 from logging_config import get_logger
+from config import app_config
+from os.path import join as path_join
 
 logger = get_logger(__name__)
 
-conn = sqlite3.connect("playlist.db")
-cur = conn.cursor()
+
+sqlite_db_path = path_join(app_config.PROJECT_ROOT_DIR,app_config.DATABASE_NAME)
 
 def init_db():
     """
@@ -13,28 +15,28 @@ def init_db():
     This function ensures the required schema is present for the playlist application. Rolls back the transaction on failure and commits on success.
     """
     try:
-        cur.execute("""CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id INTEGER UNIQUE
-        )""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS playlists (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            name TEXT,
-            cover_file_id TEXT,
-            UNIQUE(user_id, name)
-        )""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS tracks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            playlist_id INTEGER,
-            file_id TEXT
-        )""")
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("""CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER UNIQUE
+            )""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS playlists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                name TEXT,
+                cover_file_id TEXT,
+                UNIQUE(user_id, name)
+            )""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS tracks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                playlist_id INTEGER,
+                file_id TEXT
+            )""")
     except:
         logger.error("Failed to execute table creation queries",exc_info=True)
-        conn.rollback()
     else:
         logger.debug("Tables created successfully (If not exists).")
-        conn.commit()
 
 def add_user(telegram_id):
     """
@@ -43,13 +45,13 @@ def add_user(telegram_id):
     If the user already exists, the operation is ignored. Rolls back the transaction on failure and commits on success.
     """
     try:
-        cur.execute("INSERT OR IGNORE INTO users (telegram_id) VALUES (?)", (telegram_id,))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("INSERT OR IGNORE INTO users (telegram_id) VALUES (?)", (telegram_id,))
     except:
         logger.error(f"Failed to add {telegram_id} to users table",exc_info=True)
-        conn.rollback()
     else:
         logger.debug(f"{telegram_id} user added successfully")
-        conn.commit()
 
 def get_user_id(telegram_id):
     """
@@ -59,8 +61,10 @@ def get_user_id(telegram_id):
         int or None: The user ID if found, or None if the user does not exist or an error occurs.
     """
     try:
-        cur.execute("SELECT id FROM users WHERE telegram_id=?", (telegram_id,))
-        res = cur.fetchone()
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("SELECT id FROM users WHERE telegram_id=?", (telegram_id,))
+            res = cur.fetchone()
     except:
         logger.error(f"Failed to get id of user with Telegram ID = {telegram_id}")
         return None
@@ -78,7 +82,9 @@ def create_playlist(user_id, name):
         None if an unexpected error occurred during creation.
     """
     try:
-        cur.execute("INSERT INTO playlists (user_id, name) VALUES (?, ?)", (user_id, name))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("INSERT INTO playlists (user_id, name) VALUES (?, ?)", (user_id, name))
     except sqlite3.IntegrityError:
         logger.debug(f"{name} playlist already exists for user_id = {user_id}")
         return False
@@ -86,7 +92,6 @@ def create_playlist(user_id, name):
         logger.error(f"Failed to create a {name} playlist for user_id = {user_id}",exc_info=True)
         return None
     else:
-        conn.commit()
         return True
 
 def add_track(playlist_name, user_id, file_id):
@@ -105,13 +110,13 @@ def add_track(playlist_name, user_id, file_id):
     if not playlist_id:
         return False
     try:
-        cur.execute("INSERT INTO tracks (playlist_id, file_id) VALUES (?, ?)", (playlist_id, file_id))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("INSERT INTO tracks (playlist_id, file_id) VALUES (?, ?)", (playlist_id, file_id))
     except:
         logger.error(f"Failed to add track with file_id = {file_id} to playlist {playlist_name} for user_id = {user_id}",exc_info=True)
-        conn.rollback()
     else:
         logger.debug(f"Successfully add track with file_id = {file_id} to playlist {playlist_name} for user_id = {user_id}")
-        conn.commit()
         return True
     return None
 
@@ -126,7 +131,9 @@ def get_playlists(user_id):
         list[str] or None: A list of playlist names if successful, or None if an error occurs.
     """
     try:
-        cur.execute("SELECT name FROM playlists WHERE user_id=?", (user_id,))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("SELECT name FROM playlists WHERE user_id=?", (user_id,))
     except:
         logger.error(f"Failed to get playlists for user_id = {user_id}",exc_info=True)
         return None
@@ -146,11 +153,13 @@ def get_tracks(playlist_name, user_id):
         list[str] or None: A list of track file IDs if successful, or None if an error occurs.
     """
     try:
-        cur.execute("""
-            SELECT t.file_id FROM tracks t
-            JOIN playlists p ON p.id = t.playlist_id
-            WHERE p.name=? AND p.user_id=?
-        """, (playlist_name, user_id))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("""
+                SELECT t.file_id FROM tracks t
+                JOIN playlists p ON p.id = t.playlist_id
+                WHERE p.name=? AND p.user_id=?
+            """, (playlist_name, user_id))
     except:
         logger.error(f"Failed to get tracks from {playlist_name} playlist for user_id = {user_id}",exc_info=True)
         return None
@@ -168,8 +177,10 @@ def get_playlist_id_by_name(user_id, name):
         None: If a database error occurs.
     """
     try:
-        cur.execute("SELECT id FROM playlists WHERE user_id=? AND name=?", (user_id, name))
-        res = cur.fetchone()
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("SELECT id FROM playlists WHERE user_id=? AND name=?", (user_id, name))
+            res = cur.fetchone()
     except:
         logger.error(f"Failed to get playlist ID for {name} playlist from user_id = {user_id}",exc_info=True)
         return None
@@ -188,7 +199,9 @@ def get_tracks_by_playlist_id(playlist_id):
         list[str] or None: A list of file IDs if successful, or None if an error occurs.
     """
     try:
-        cur.execute("SELECT file_id FROM tracks WHERE playlist_id=?", (playlist_id,))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("SELECT file_id FROM tracks WHERE playlist_id=?", (playlist_id,))
     except:
         logger.error(f"Failed to get tracks from playlist_id = {playlist_id}",exc_info=True)
         return None
@@ -206,14 +219,14 @@ def set_cover_image(user_id, playlist_name, file_id):
         True if the cover image was successfully updated, or False if the operation failed.
     """
     try:
-        cur.execute("UPDATE playlists SET cover_file_id=? WHERE user_id=? AND name=?", (file_id, user_id, playlist_name))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("UPDATE playlists SET cover_file_id=? WHERE user_id=? AND name=?", (file_id, user_id, playlist_name))
     except:
         logger.error(f"Failed to set cover with file_id = {file_id} in {playlist_name} for user_id = {user_id}",exc_info=True)
-        conn.rollback()
         return False
     else:
         logger.debug(f"Successfully set cover with file_id = {file_id} in {playlist_name} for user_id = {user_id}")
-        conn.commit()
         return True
 
 def get_cover_image_by_playlist_id(playlist_id):
@@ -227,8 +240,10 @@ def get_cover_image_by_playlist_id(playlist_id):
         str or None: The file ID of the cover image if found, or None if not found or on error.
     """
     try:
-        cur.execute("SELECT cover_file_id FROM playlists WHERE id=?", (playlist_id,))
-        res = cur.fetchone()
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("SELECT cover_file_id FROM playlists WHERE id=?", (playlist_id,))
+            res = cur.fetchone()
     except:
         logger.error(f"Failed to get cover image file_id for playlist_id = {playlist_id}",exc_info=True)
         return None
@@ -253,8 +268,10 @@ def remove_track_by_index(user_id, playlist_name, index):
     if not playlist_id:
         return False
     try:
-        cur.execute("SELECT id FROM tracks WHERE playlist_id=? ORDER BY id LIMIT 1 OFFSET ?", (playlist_id, index))
-        track = cur.fetchone()
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("SELECT id FROM tracks WHERE playlist_id=? ORDER BY id LIMIT 1 OFFSET ?", (playlist_id, index))
+            track = cur.fetchone()
     except:
         logger.error(f"Failed to get track_id from tracks table for playlist_id = {playlist_id}",exc_info=True)
         return None
@@ -264,14 +281,15 @@ def remove_track_by_index(user_id, playlist_name, index):
         return False
     track_id = track[0]
     try:
-        cur.execute("DELETE FROM tracks WHERE id=?", (track_id,))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("DELETE FROM tracks WHERE id=?", (track_id,))
     except:
         logger.error(f"Failed to delete track_id = {track_id} from tracks table",exc_info=True)
-        conn.rollback()
         return None
     else:
         logger.debug(f"Successfully delete track_id = {track_id} from tracks table")
-        conn.commit()
+        
     return True
 
 def delete_playlist(user_id, playlist_name):
@@ -287,15 +305,15 @@ def delete_playlist(user_id, playlist_name):
     if not playlist_id:
         return False
     try:
-        cur.execute("DELETE FROM tracks WHERE playlist_id=?", (playlist_id,))
-        cur.execute("DELETE FROM playlists WHERE id=?", (playlist_id,))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("DELETE FROM tracks WHERE playlist_id=?", (playlist_id,))
+            cur.execute("DELETE FROM playlists WHERE id=?", (playlist_id,))
     except:
         logger.error(f"Failed to remove tracks from {playlist_name} playlist.",exc_info=True)
-        conn.rollback()
         return None
     else:
         logger.debug(f"Successfully remove tracks from {playlist_name} playlist.")
-        conn.commit()
         return True
 
 def rename_playlist(user_id, old_name, new_name):
@@ -311,11 +329,11 @@ def rename_playlist(user_id, old_name, new_name):
         bool: True if the playlist was successfully renamed; None if an error occurred.
     """
     try:
-        cur.execute("UPDATE playlists SET name=? WHERE user_id=? AND name=?", (new_name, user_id, old_name))
+        with sqlite3.connect(sqlite_db_path) as conn:
+            cur= conn.cursor()
+            cur.execute("UPDATE playlists SET name=? WHERE user_id=? AND name=?", (new_name, user_id, old_name))
     except:
         logger.error(f"Failed to rename {old_name} playlist to {new_name} for user_id = {user_id}",exc_info=True)
-        conn.rollback()
     else:
-        logger.debug(f"Successfully rename {old_name} playlist to {new_name} for user_id = {user_id}")
-        conn.commit()
+        logger.debug(f"Successfully rename {old_name} playlist to {new_name} for user_id = {user_id}") 
         return True

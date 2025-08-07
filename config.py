@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 from os import getenv
 from dataclasses import dataclass
+import os
+import pathlib
 
 load_dotenv()
 
@@ -8,6 +10,8 @@ load_dotenv()
 class appConfigs:
     BOT_TOKEN: str = getenv("BOT_TOKEN","")
     LOG_LEVEL: str = getenv("LOG_LEVEL","INFO")
+    DATABASE_NAME: str = getenv("DATABASE_NAME","playlist.db")
+    PROJECT_ROOT_DIR: str = str(pathlib.Path(os.path.dirname(os.path.abspath(__file__))).parent.absolute())
 
     def __post_init__(self):
         if not self.BOT_TOKEN:
