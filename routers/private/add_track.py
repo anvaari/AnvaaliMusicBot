@@ -112,6 +112,10 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
         await message.answer(
             f"❌ Failed to add '{audio_title}' to {playlist_name}."
         )
+    elif track_added == False:
+        await message.answer(
+            f"❌ Track with title='{audio_title}' already exists in **{playlist_name}** playlist."
+        )
     else:
         context["tracks_added"] += 1
         

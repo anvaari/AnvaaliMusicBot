@@ -71,21 +71,22 @@ def add_track(playlist_name, user_id, file_id):
         file_id (str): The file ID of the track to add.
     
     Returns:
-        bool or None: Returns True if the track was added successfully, False if the playlist does not exist, or None on database error.
+        bool or None: Returns True if the track was added successfully, False if the track already exist, or None on database error.
     """
     playlist_id = get_playlist_id_by_name(user_id,playlist_name)
-    if not playlist_id:
-        return False
     try:
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("INSERT INTO tracks (playlist_id, file_id) VALUES (?, ?)", (playlist_id, file_id))
+    except sqlite3.IntegrityError:
+        logger.info(f"Track with file_id={file_id} already exists for {playlist_name} playlist for user_id={user_id}")
+        return False
     except:
         logger.error(f"Failed to add track with file_id = {file_id} to playlist {playlist_name} for user_id = {user_id}",exc_info=True)
+        return None
     else:
         logger.debug(f"Successfully add track with file_id = {file_id} to playlist {playlist_name} for user_id = {user_id}")
         return True
-    return None
 
 def get_playlists(user_id):
     """

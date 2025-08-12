@@ -31,7 +31,8 @@ def init_db():
             cur.execute("""CREATE TABLE IF NOT EXISTS tracks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 playlist_id INTEGER,
-                file_id TEXT
+                file_id TEXT,
+                UNIQUE(playlist_id,file_id)
             )""")
     except:
         logger.error("Failed to execute table creation queries",exc_info=True)
