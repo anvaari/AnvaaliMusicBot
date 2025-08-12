@@ -46,17 +46,19 @@ async def delete_confirm_action(callback: CallbackQuery):
     edit_text_message = get_edit_text_message(callback_message)
 
     success = ps.delete_playlist(user_db_id, playlist_name)
-    if success:
+    if success is True:
         logger.info(f"User {user_id} deleted playlist '{playlist_name}'")
         await edit_text_message(f"🗑 Playlist '{playlist_name}' deleted.")
         return await callback.answer()
-
+    elif success is False:
+        logger.warning(f"User {user_id} tried to delete non-existent playlist '{playlist_name}'")
+        await edit_text_message(f"❌ Playlist *{playlist_name}* not found.")
+        return await callback.answer()
     else:
         logger.warning(f"User {user_id} failed to delete playlist '{playlist_name}'")
         await edit_text_message(f"❌ Failed to delete *{playlist_name}*.")
         return await callback.answer()
 
-        
 @remove_playlist_router.callback_query(F.data == "cancel_delete")
 async def delete_cancel_action(callback: CallbackQuery):
     callback_message = get_callback_message(callback)
