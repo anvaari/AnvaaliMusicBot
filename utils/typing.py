@@ -31,3 +31,11 @@ def get_edit_markup_message(message: Message|InaccessibleMessage):
 def get_edit_text_message(message: Message|InaccessibleMessage):
     assert isinstance(message,Message), "Expected Message"
     return message.edit_text
+
+def get_edit_media_message(message: Message|InaccessibleMessage):
+    assert isinstance(message,Message), "Expected Message"
+    return message.edit_media
+
+def get_edit_caption_message(message: Message|InaccessibleMessage):
+    assert isinstance(message,Message), "Expected Message"
+    return message.edit_caption
