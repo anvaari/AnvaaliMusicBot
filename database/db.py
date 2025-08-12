@@ -26,13 +26,15 @@ def init_db():
                 user_id INTEGER,
                 name TEXT,
                 cover_file_id TEXT,
-                UNIQUE(user_id, name)
+                UNIQUE(user_id, name),
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )""")
             cur.execute("""CREATE TABLE IF NOT EXISTS tracks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 playlist_id INTEGER,
                 file_id TEXT,
-                UNIQUE(playlist_id,file_id)
+                UNIQUE(playlist_id,file_id),
+                FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE
             )""")
     except Exception as e:
         logger.error("Failed to execute table creation queries",exc_info=True)
