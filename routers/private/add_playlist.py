@@ -18,9 +18,19 @@ async def cmd_new_playlist(message: Message, state: FSMContext):
 
 @add_playlist_router.message(PlaylistStates.waiting_for_playlist_name)
 async def process_new_playlist(message: Message, state: FSMContext):
-    name = get_message_text_safe(message)
+    playlist_name = get_message_text_safe(message).strip()
+    if not playlist_name:
+        return await message.answer("❌ Playlist name cannot be empty. Please enter a valid name.")
     user_id = get_user_id(message)
     user_db_id = ps.get_user_id(user_id)
-    ps.create_playlist(user_db_id,name)
-    await message.answer(f"✅ Playlist '{name}' created!", reply_markup=get_playlist_actions_keyboard(name))
-    await state.clear()
+    result = ps.create_playlist(user_db_id,playlist_name)
+    if result is True:
+        logger.info(f"User {user_id} created playlist '{playlist_name}'")
+        await message.answer(f"✅ Playlist '{playlist_name}' created!", reply_markup=get_playlist_actions_keyboard(playlist_name))
+        return await state.clear()
+    elif result is False:
+        logger.warning(f"User {user_id} attempted to create duplicate playlist '{playlist_name}'")
+        return await message.answer(f"❌ Playlist '{playlist_name}' already exists.")
+    else:
+        logger.error(f"DB error while creating playlist '{playlist_name}' for user_id={user_id}")
+        return await message.answer("⚠️ Something went wrong. Please try again.")
