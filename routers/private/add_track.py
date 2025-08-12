@@ -97,9 +97,13 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
             f"⏰ Time window expired ({app_config.ADD_TRACK_TIME_WINDOW}s)\n"
             f"📝 Send the playlist name again to continue adding tracks."
         )
-        user_contexts[user_id] = defaultdict(lambda: {"playlist_name": None, "playlist_db_id": None, "timestamp": 0, "tracks_added": 0})
-        await state.clear()
-        return
+        user_contexts[user_id] = {
+            "playlist_name": None,
+            "playlist_db_id": None,
+            "timestamp": 0,
+            "tracks_added": 0
+        }
+        return await state.clear()
 
     playlist_name = context["playlist_name"]
 
