@@ -33,7 +33,6 @@ async def handle_rename_callback(callback: CallbackQuery, state: FSMContext):
 @rename_playlist_router.message(PlaylistStates.waiting_for_rename)
 async def process_rename_playlist(message: Message, state: FSMContext):
     user_id = get_user_id(message)
-    edit_text_message = get_edit_text_message(message)
 
     user_db_id = ps.get_user_id(user_id)
     
