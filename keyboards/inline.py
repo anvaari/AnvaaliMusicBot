@@ -51,4 +51,17 @@ def get_music_remove_list_keyboard(music_ids:list[int]):
     kb = InlineKeyboardMarkup(inline_keyboard=inline_keyboard,row_width=2)
     return kb
 
+def get_playlist_delete_confirmation_keyboard(playlist_name: str):
+
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Confirm Delete", callback_data=f"confirm_delete:{playlist_name}"),
+                InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_delete")
+            ],
+            
+
+        ],
+        row_width=2)
     
+    return kb
