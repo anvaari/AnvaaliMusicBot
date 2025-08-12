@@ -62,12 +62,20 @@ async def delete_track(callback: CallbackQuery, state: FSMContext):
     user_db_id = ps.get_user_id(user_id)
 
     success = ps.remove_track_by_index(user_db_id, playlist_name, track_index)
-    if success == True:
+    if success is True:
         logger.info(f"User {user_id} removed track #{track_index} from '{playlist_name}'")
         await edit_text_message(f"✅ Track #{track_index} removed from '{playlist_name}'.")
+    elif success is None:
+        logger.error(
+            f"DB error removing track #{track_index} from '{playlist_name}' "
+            f"for user_id={user_id} (db_id={user_db_id})"
+        )
+        await edit_text_message("⚠️ Something went wrong. Please try again.")
     else:
-        logger.warning(f"Failed to remove track #{track_index} from '{playlist_name}' for user_id={user_id} ")
-        await edit_text_message(f"❌ Can't remove #{track_index} from *{playlist_name}*")
+        logger.warning(
+            f"Track #{track_index} not found in '{playlist_name}' for user_id={user_id}"
+        )
+        await edit_text_message(f"❌ Can't remove track #{track_index} from '{playlist_name}'.")
     
     await state.clear()
     return await callback.answer()
