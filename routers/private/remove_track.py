@@ -1,7 +1,5 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
-from aiogram.types.inaccessible_message import InaccessibleMessage
-from aiogram.types.message import Message
 from aiogram.fsm.context import FSMContext
 import services.playlist_service as ps
 from states.user import PlaylistStates

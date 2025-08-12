@@ -1,8 +1,7 @@
 from aiogram import Router, F
-from aiogram.types import Message,InputMediaAudio,CallbackQuery
+from aiogram.types import Message,CallbackQuery
 from keyboards.inline import get_playlist_list_keyboard,get_playlist_actions_keyboard
 import services.playlist_service as ps
-from database import db
 from utils.logging import get_logger
 from utils.typing import (
     get_user_id,

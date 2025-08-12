@@ -2,7 +2,6 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery,Message
 from aiogram.fsm.context import FSMContext
 from states.user import PlaylistStates
-from keyboards.inline import get_playlist_actions_keyboard
 import services.playlist_service as ps
 from utils.logging import get_logger
 from utils.typing import (
