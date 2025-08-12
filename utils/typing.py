@@ -1,4 +1,4 @@
-from aiogram.types import Message,CallbackQuery
+from aiogram.types import Message,CallbackQuery,InaccessibleMessage
 
 def get_user_id(message: Message | CallbackQuery) -> int:
     assert message.from_user is not None, "Expected message.from_user not null"
@@ -24,3 +24,10 @@ def get_callback_message(callback: CallbackQuery):
     assert callback.message is not None, "Expected callback message"
     return callback.message
 
+def get_edit_markup_message(message: Message|InaccessibleMessage):
+    assert isinstance(message,Message), "Expected message"
+    return message.edit_reply_markup
+
+def get_edit_text_message(message: Message|InaccessibleMessage):
+    assert isinstance(message,Message), "Expected Message"
+    return message.edit_text
