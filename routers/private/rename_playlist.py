@@ -8,7 +8,8 @@ from utils.typing import (
     get_user_id,
     get_message_text_safe,
     get_callback_message,
-    get_callback_text_safe
+    get_callback_text_safe,
+    get_edit_text_message
 )
 
 logger = get_logger(__name__)
@@ -18,16 +19,22 @@ rename_playlist_router = Router()
 @rename_playlist_router.callback_query(F.data.startswith("rename:"))
 async def handle_rename_callback(callback: CallbackQuery, state: FSMContext):
     callback_text = get_callback_text_safe(callback)
-    playlist_name = callback_text.split(":")[1]
     callback_message = get_callback_message(callback)
+    edit_text_message = get_edit_text_message(callback_message)
+
+    playlist_name = callback_text.split(":")[1]
+
     await state.set_data(data={"playlist_name_to_rename":playlist_name})
     await state.set_state(PlaylistStates.waiting_for_rename)
-    await callback_message.answer(f"🆕 Enter new name for {playlist_name}")
-    await callback.answer()
+
+    await edit_text_message(f"🆕 Enter new name for {playlist_name}")
+    return await callback.answer()
 
 @rename_playlist_router.message(PlaylistStates.waiting_for_rename)
 async def process_rename_playlist(message: Message, state: FSMContext):
     user_id = get_user_id(message)
+    edit_text_message = get_edit_text_message(message)
+
     user_db_id = ps.get_user_id(user_id)
     
     state_data = await state.get_data()

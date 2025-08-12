@@ -10,7 +10,8 @@ from utils.typing import (
     get_audio_file_id,
     get_audio_title,
     get_callback_message,
-    get_callback_text_safe
+    get_callback_text_safe,
+    get_edit_text_message
 )
 from config import app_config
 from services.playlist_service import (
@@ -126,14 +127,16 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
 @add_track_router.callback_query(F.data.startswith("add_music:"))
 async def handle_add_track_inline(callback: CallbackQuery):
     callback_text = get_callback_text_safe(callback)
-    playlist_name = callback_text.split(":")[1]
     callback_message = get_callback_message(callback)
+    edit_text_message = get_edit_text_message(callback_message)
+
+    playlist_name = callback_text.split(":")[1]
     
-    await callback_message.answer(
+    await edit_text_message(
         f"To add track to `{playlist_name}` "
         f"just forward tracks and type `{playlist_name}` "
         "as message, no need to press any button."
     )
 
-    await callback.answer()
+    return await callback.answer()
 
