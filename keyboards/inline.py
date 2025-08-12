@@ -10,6 +10,8 @@ def get_playlist_actions_keyboard(playlist_name: str):
         [
             InlineKeyboardButton(text="☠️ Delete Track", callback_data=f"delete_track:{playlist_name}"),
             InlineKeyboardButton(text="☠️ Delete Playlist", callback_data=f"delete_playlist:{playlist_name}"),
+        ],
+        [
             InlineKeyboardButton(text="⌨ Rename Playlist", callback_data=f"rename:{playlist_name}")
 
         ],
