@@ -34,7 +34,8 @@ def init_db():
                 file_id TEXT,
                 UNIQUE(playlist_id,file_id)
             )""")
-    except:
+    except Exception as e:
         logger.error("Failed to execute table creation queries",exc_info=True)
+        raise e
     else:
         logger.debug("Tables created successfully (If not exists).")

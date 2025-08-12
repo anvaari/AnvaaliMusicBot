@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+import sys
 
 import asyncio
 
@@ -52,8 +53,11 @@ async def main():
     Starts the Telegram bot and begins polling for updates asynchronously.
     """
     logger.info("Starting bot ...")
-    
-    init_db()
+    try:
+        init_db()
+    except:
+        logger.error("Database initialization failed, exiting.", exc_info=True)
+        sys.exit(1)
 
     await dp.start_polling(bot)
 
