@@ -13,6 +13,7 @@ from routers.private.show_musics import show_musics_router
 from routers.private.rename_playlist import rename_playlist_router
 from routers.private.set_cover import set_cover_router
 from routers.private.remove_track import remove_track_router
+from routers.private.remove_playlist import remove_playlist_router
 
 from config import app_config
 
@@ -41,7 +42,8 @@ dp.include_routers(
     show_musics_router,
     rename_playlist_router,
     set_cover_router,
-    remove_track_router
+    remove_track_router,
+    remove_playlist_router
 )
 
 
