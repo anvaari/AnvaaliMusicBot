@@ -32,7 +32,7 @@ async def delete_track_handler(callback: CallbackQuery,state: FSMContext):
     
     if not tracks:
         logger.warning(f"User {user_id} tried to show non-existent or empty playlist '{playlist_name}'")
-        await edit_text_message("Playlist is empty", show_alert=True)
+        await edit_text_message("Playlist is empty")
         return await callback.answer()
         
     music_remove_keyboard = get_music_remove_list_keyboard(list(range(len(tracks))))
