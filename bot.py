@@ -50,7 +50,11 @@ dp.include_routers(
 
 async def main():
     """
-    Starts the Telegram bot and begins polling for updates asynchronously.
+    Start the Telegram bot: initialize the database, then begin polling for updates.
+    
+    This coroutine initializes the application's database by calling init_db(). If
+    database initialization fails, the process exits with status code 1. On
+    successful initialization it starts long-polling the Dispatcher for updates.
     """
     logger.info("Starting bot ...")
     try:

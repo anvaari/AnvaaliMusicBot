@@ -18,6 +18,22 @@ share_playlist_router = Router()
 
 @share_playlist_router.callback_query(F.data.startswith("share:"))
 async def share_playlist(callback: CallbackQuery, bot: Bot):
+    """
+    Handle a "share:" callback: resolve the playlist and replace the original message with a shareable bot link.
+    
+    Given an aiogram CallbackQuery triggered by a "share:<playlist_name>" payload, this handler:
+    - Resolves the internal DB user id for the Telegram user.
+    - Looks up the playlist id by the resolved user and playlist name.
+    - On success, builds a share link of the form `https://t.me/{bot_username}?start=share__{playlist_id}` and edits the originating message to present that link.
+    - On failure, edits the message with an appropriate user-facing error and acknowledges the callback.
+    
+    Parameters:
+        callback (CallbackQuery): The incoming callback query that contains the "share:<playlist_name>" data and original message.
+        bot (Bot): Telegram Bot instance (used to fetch the bot username).
+    
+    Returns:
+        None
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
     

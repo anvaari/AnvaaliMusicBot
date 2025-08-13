@@ -14,6 +14,14 @@ start_router = Router()
 
 @start_router.message(F.text.startswith("/start"))
 async def cmd_start(message: Message):
+    """
+    Handle the /start command and deep-link share links; register the user and reply with the main menu or shared playlist media.
+    
+    If the incoming message is exactly "/start", sends a welcome message with the main menu. If the message contains a deep-link payload of the form "/start share__<playlist_id>", validates the playlist id, retrieves playlist metadata and tracks from the playlist service, sends a short informational message (and cover image if available), and streams tracks to the user in media groups (batches up to 10). For malformed or unknown payloads it replies with an appropriate warning and the main menu.
+    
+    Parameters:
+        message (aiogram.types.Message): Incoming Telegram message to process and use for replies.
+    """
     user_id = get_user_id(message)
     ps.add_user(user_id)
     

@@ -18,6 +18,16 @@ show_playlist_router = Router()
 
 @show_playlist_router.message(F.text == f"{EMOJIS.HEADPHONE.value} My Playlists")
 async def show_all_playlists(message: Message):
+    """
+    Handle "🎧 My Playlists" user message: resolve the Telegram user to a DB user, fetch their playlists, and reply with an appropriate message or an inline keyboard listing playlists.
+    
+    The handler:
+    - Resolves the Telegram user id to a database user id.
+    - If the DB id cannot be resolved, replies with an internal error message.
+    - Fetches playlists for the DB user; on failure replies with a generic error message.
+    - If the user has no playlists, informs the user and suggests creating one.
+    - If playlists are retrieved, sends a "Your playlists" message with a playlist-list inline keyboard.
+    """
     user_id = get_user_id(message)
     user_db_id = ps.get_user_id(user_id)
     
@@ -35,6 +45,11 @@ async def show_all_playlists(message: Message):
 
 @show_playlist_router.callback_query(F.data.startswith("use_playlist:"))
 async def show_playlist_action_kb(callback: CallbackQuery):
+    """
+    Show available actions for a selected playlist by editing the originating callback message.
+    
+    Extracts the playlist name from the callback data (expected format "use_playlist:<playlist_name>"), updates the callback's message text to "✏️ Select action for playlist '<playlist_name>':" and replaces its inline keyboard with the keyboard returned by get_playlist_actions_keyboard(playlist_name). Finally, acknowledges the callback to clear the client's loading state.
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
 

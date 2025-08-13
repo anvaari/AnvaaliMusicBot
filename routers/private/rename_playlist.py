@@ -19,6 +19,19 @@ rename_playlist_router = Router()
 
 @rename_playlist_router.callback_query(F.data.startswith("rename:"))
 async def handle_rename_callback(callback: CallbackQuery, state: FSMContext):
+    """
+    Handle a "rename:<playlist_name>" callback by prompting the user to enter a new playlist name.
+    
+    Expects the callback data to be in the form "rename:<playlist_name>". The handler:
+    - extracts the playlist name from the callback data,
+    - stores it in the FSM state under "playlist_name_to_rename",
+    - transitions the FSM to PlaylistStates.waiting_for_rename,
+    - edits the originating message to prompt the user to enter the new name,
+    - and answers the callback to acknowledge the interaction.
+    
+    Returns:
+        The result of CallbackQuery.answer().
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
     edit_text_message = get_edit_text_message(callback_message)
@@ -33,6 +46,20 @@ async def handle_rename_callback(callback: CallbackQuery, state: FSMContext):
 
 @rename_playlist_router.message(PlaylistStates.waiting_for_rename)
 async def process_rename_playlist(message: Message, state: FSMContext):
+    """
+    Handle the user's message that supplies a new name for a playlist and perform the rename.
+    
+    This async handler expects to run while the FSM is in PlaylistStates.waiting_for_rename. It:
+    - Reads the original playlist name from state key "playlist_name_to_rename".
+    - Uses the incoming message text as the proposed new playlist name.
+    - Resolves the DB user id; if it cannot, replies with an internal error and returns.
+    - If a playlist with the new name already exists for the user, clears state, notifies the user, and returns.
+    - Otherwise performs the rename via the playlist service, clears state, logs the change, and replies with success.
+    
+    Notes:
+    - The function sends its responses via message.answer() and returns that result.
+    - Required state key: "playlist_name_to_rename" must be present before calling this handler.
+    """
     user_id = get_user_id(message)
 
     user_db_id = ps.get_user_id(user_id)

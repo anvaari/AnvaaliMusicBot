@@ -20,6 +20,20 @@ remove_track_router = Router()
 
 @remove_track_router.callback_query(F.data.startswith("delete_track:"))
 async def delete_track_handler(callback: CallbackQuery,state: FSMContext):
+    """
+    Begin the "remove track" flow: validate the user and playlist, present a keyboard of track indices, and transition the FSM to await the user's index choice.
+    
+    The incoming CallbackQuery must contain callback data of the form "delete_track:<playlist_name>".
+    Behavior:
+    - Resolves the Telegram user to an internal DB user id. If resolution fails, edits the message with an internal error notice and returns.
+    - Loads tracks for the given playlist. If the playlist is empty or missing, edits the message to indicate the playlist is empty and answers the callback.
+    - If tracks exist, edits the message to prompt the user to choose a track index, replaces the message markup with a keyboard of indices, sets the FSM state to PlaylistStates.waiting_for_delete_track, and stores {"playlist_to_remove_track": <playlist_name>} in FSM data.
+    - Always answers the callback at the end of a successful flow.
+    
+    Parameters:
+    - callback: CallbackQuery containing the "delete_track:<playlist_name>" data.
+    - state: FSMContext used to set the next state and persist the playlist name.
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
     edit_text_message = get_edit_text_message(callback_message)
@@ -54,6 +68,11 @@ async def delete_track_handler(callback: CallbackQuery,state: FSMContext):
 
 @remove_track_router.callback_query(PlaylistStates.waiting_for_delete_track)
 async def delete_track(callback: CallbackQuery, state: FSMContext):
+    """
+    Remove a track from the playlist chosen earlier in the FSM and notify the user.
+    
+    Reads the playlist name from FSM state key "playlist_to_remove_track", parses the selected track index from the callback data (expects a colon-separated value with the index after the colon), resolves the caller's DB user id, and calls the playlist service to remove the track by index. Updates the chat message with success, not-found, or error text, clears the FSM state, and answers the callback.
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
     edit_text_message = get_edit_text_message(callback_message)
