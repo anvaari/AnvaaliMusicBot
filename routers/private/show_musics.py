@@ -51,8 +51,8 @@ async def show_playlist(callback: CallbackQuery):
         await edit_text_message(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks")
 
     for i in range(0, len(tracks), 10):
-        batch = tracks[i:i  10]
-        media = [InputMediaAudio(media=file_id,caption=f"Index: {iindex}") for index,file_id in enumerate(batch)]
+        batch = tracks[i:i + 10]
+        media = [InputMediaAudio(media=file_id,caption=f"Index: {index}") for index,file_id in enumerate(batch)]
         await callback_message.answer_media_group(media) # type: ignore
     
     await callback.answer()
