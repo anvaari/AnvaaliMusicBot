@@ -60,7 +60,7 @@ async def store_playlist_name(message: Message,state: FSMContext):
         return
 
     playlist_db_id = get_playlist_id_by_name(user_db_id,playlist_name)
-    if playlist_db_id == False:
+    if playlist_db_id is False:
         logger.warning(f"User {user_id} tried to add to non-existent playlist '{playlist_name}'")
         await message.answer(
             f"{EMOJIS.FAIL.value} Playlist with name `{playlist_name}` is not exist for this user."
@@ -125,7 +125,7 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
         await message.answer(
             f"{EMOJIS.FAIL.value} Failed to add '{audio_title}' to {playlist_name}."
         )
-    elif track_added == False:
+    elif track_added is False:
         await message.answer(
             f"{EMOJIS.FAIL.value} Track with title='{audio_title}' already exists in **{playlist_name}** playlist."
         )
