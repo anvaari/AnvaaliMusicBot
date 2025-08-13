@@ -6,26 +6,31 @@ A Telegram bot that allows users to create, manage, and share music playlists ma
 
 ## ✨ Features
 
-- `/add <playlist_name>` – Start adding audio files to a playlist.
-- `/finish` – Cancel current adding session.
-- `/myplaylists` – List your playlists.
-- `/show_playlist <playlist_name>` – View all tracks in a playlist (sent as a media group).
-- `/share <playlist_name>` – Share a playlist link that previews it to others.
-- `/remove_track <playlist_name> <index>` – Remove a track from a playlist by index.
-- `/remove_playlist <playlist_name>` – Delete a playlist entirely.
-- `/rename <old_name> <new_name>` – Rename a playlist.
-- `/set_cover <playlist_name>` – Set cover image for playlist.
-- Playlist state is session-based — no need for `/done` command.
-- Works concurrently with multiple users without conflicts.
+### Button-Based Interface
+
+- **🎧 My Playlists** – View and manage your playlists with interactive buttons
+- **➕ New Playlist** – Create a new playlist with guided prompts
+- **Interactive Actions** – Add music, show tracks, delete, rename, set cover, and share playlists via inline buttons
+- **Time-Windowed Adding** – Add multiple tracks to a playlist within a configurable time window
+- **Confirmation Dialogs** – Safe playlist deletion with confirmation prompts
+- **Cover Images** – Set custom cover images for your playlists
+- **Playlist Sharing** – Generate shareable links that preview playlists to others
+
+### Technical Features
+
+- **FSM (Finite State Machine)** – Robust state management for multi-step interactions
+- **Router-Based Architecture** – Modular, maintainable code structure
+- **Concurrent Operations** – Works seamlessly with multiple users
+- **SQLite Database** – Reliable local storage with automatic initialization
 
 ---
 
 ## 🧠 Vision
 
 This bot is the first phase in a project that will:
-- Allow users to mint their playlists as NFTs on the TON blockchain.
-- Support artist tipping and token-based unlocks using a custom token (future).
-- Create a music NFT ecosystem native to Telegram and TON.
+
+- Allow users to mint their playlists as NFTs on the TON blockchain
+- Create a music NFT ecosystem native to Telegram and TON
 
 ---
 
@@ -37,12 +42,17 @@ This bot is the first phase in a project that will:
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-````
+```
 
-### 2. set BOT_TOKEN as environment. Use @BotFather to create one
+### 2. Environment Configuration
+
+Create a `.env` file with your bot token (get one from @BotFather):
 
 ```bash
-echo "BOT_TOKEN = \"your_telegram_bot_token_here\" " > .env
+BOT_TOKEN=your_telegram_bot_token_here
+DATABASE_NAME=playlist.db
+ADD_TRACK_TIME_WINDOW=60
+LOG_LEVEL=INFO
 ```
 
 ### 3. Run the Bot
@@ -53,27 +63,72 @@ python bot.py
 
 ---
 
+## 🎮 How to Use
+
+1. **Start the bot** – Send `/start` to begin
+2. **Create a playlist** – Tap "➕ New Playlist" and enter a name
+3. **Add music** – Select "Add Music" from playlist actions, then forward audio files
+4. **Manage playlists** – Use "🎧 My Playlists" to view and manage your collections
+5. **Share playlists** – Generate shareable links that others can preview
+
+---
+
 ## 🗃 Database Schema (SQLite)
 
-* `users`: `id`, `telegram_id`
-* `playlists`: `id`, `user_id`, `name`, `cover_file_id`
-* `tracks`: `id`, `playlist_id`, `file_id`
+* `users`: `id` (PRIMARY KEY), `telegram_id` (UNIQUE)
+* `playlists`: `id` (PRIMARY KEY), `user_id`, `name`, `cover_file_id`, UNIQUE(user_id, name)
+* `tracks`: `id` (PRIMARY KEY), `playlist_id`, `file_id`, UNIQUE(playlist_id, file_id)
 
 ---
 
 ## 📂 Project Structure
 
 ```
-playlist-bot/
-├── bot.py          # Main bot logic (aiogram)
-├── db.py           # SQLite database functions
-├── config.py       # Secrets (BOT_TOKEN)
-├── README.md
+AnvaaliMusicBot/
+├── bot.py                      # Main bot entry point
+├── config.py                   # Configuration and environment variables
+├── database/
+│   └── db.py                   # Database initialization and schema
+├── services/
+│   └── playlist_service.py     # Playlist CRUD operations
+├── routers/
+│   └── private/                # Private chat handlers
+│       ├── start.py            # /start command and deep linking
+│       ├── add_playlist.py     # New playlist creation
+│       ├── add_track.py        # Track addition with time windows
+│       ├── show_playlists.py   # Playlist listing and selection
+│       ├── show_musics.py      # Track display with media groups
+│       ├── rename_playlist.py  # Playlist renaming flow
+│       ├── set_cover.py        # Cover image setting
+│       ├── share_playlist.py   # Playlist sharing links
+│       ├── remove_track.py     # Track removal by index
+│       └── remove_playlist.py  # Playlist deletion with confirmation
+├── keyboards/
+│   ├── inline.py               # Inline keyboard builders
+│   └── reply.py                # Reply keyboard builders
+├── states/
+│   └── user.py                 # FSM state definitions
+├── utils/
+│   ├── filters.py              # Custom aiogram filters
+│   ├── messages.py             # Message utility functions
+│   ├── typing.py               # Type-safe accessor functions
+│   └── logging.py              # Logging configuration
 └── requirements.txt
 ```
 
 ---
 
+## 🔧 Technical Details
+
+- **Framework**: aiogram v3 with Router-based architecture
+- **State Management**: FSM (Finite State Machine) for multi-step interactions
+- **Database**: SQLite with context-managed connections
+- **Keyboards**: Inline and reply keyboards for intuitive UX
+- **Error Handling**: Comprehensive logging and user feedback
+- **Modularity**: Separate routers for each feature area
+
+---
+
 ## 📬 Contributing
 
-Feel free to fork, extend, or raise PRs. Ideas welcome.
+Feel free to fork, extend, or raise PRs. Ideas welcome for the future TON blockchain integration!
