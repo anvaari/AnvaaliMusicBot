@@ -16,6 +16,12 @@ class appConfigs:
     ADD_TRACK_TIME_WINDOW: int = int(getenv("ADD_TRACK_TIME_WINDOW","60"))
 
     def __post_init__(self):
+        """
+        Validate required configuration after initialization.
+        
+        Raises:
+            ValueError: If the BOT_TOKEN configuration is empty or not provided.
+        """
         if not self.BOT_TOKEN:
             raise ValueError("Please set BOT_TOKEN value as environment variable")
 

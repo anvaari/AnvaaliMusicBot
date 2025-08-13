@@ -18,6 +18,14 @@ show_musics_router = Router()
 
 @show_musics_router.callback_query(F.data.startswith("show:"))
 async def show_playlist(callback: CallbackQuery):
+    """
+    Show a user's playlist identified in the callback data and stream its tracks as media groups.
+    
+    Fetches the database user id and the playlist tracks by parsing the playlist name from the callback data (expected format "show:<playlist_name>"). If the user or tracks cannot be resolved, edits the invoking message to display an error. If the playlist exists, optionally updates the message photo/caption with the playlist cover and sends the playlist tracks in batches (up to 10) as audio media groups, then acknowledges the callback.
+    
+    Parameters:
+        callback (CallbackQuery): The incoming callback query that triggered showing the playlist; its data must contain the playlist name.
+    """
     callback_text = get_callback_text_safe(callback)
     user_id = get_user_id(callback)
     callback_message = get_callback_message(callback)

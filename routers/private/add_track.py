@@ -46,6 +46,21 @@ user_contexts: Dict[int, Dict[str, Any]] = defaultdict(lambda: {
         and not is_text_starts_with_emoji(message.text)
 )
 async def store_playlist_name(message: Message,state: FSMContext):
+    """
+    Start an "add tracks" session for the user by storing the chosen playlist and prompting the user to forward audio.
+    
+    If the message text is a non-empty playlist name and the playlist exists for the user, this function:
+    - records a per-user context entry with keys: "playlist_name", "playlist_db_id", "timestamp", and "tracks_added" (initialized to 0);
+    - transitions the FSM to PlaylistStates.waiting_for_add_music;
+    - sends a confirmation message describing the playlist and the time window allowed for forwarding audio files.
+    
+    Handles these error conditions by notifying the user and not starting a session:
+    - unresolved database user id (sends an internal error message);
+    - empty or whitespace-only playlist name (prompts for a valid name);
+    - playlist not found for the user (informs that the playlist does not exist).
+    
+    Side effects: modifies the global user_contexts, sets FSM state, and sends messages to the user.
+    """
     user_id = get_user_id(message)
     user_db_id = get_db_user_id(user_id)
     message_text = get_message_text_safe(message)
@@ -86,6 +101,15 @@ async def store_playlist_name(message: Message,state: FSMContext):
 
 @add_track_router.message(PlaylistStates.waiting_for_add_music, F.audio)
 async def handle_forwarded_audio(message: Message,state: FSMContext):
+    """
+    Handle a forwarded audio message when the user is in the "waiting for add music" session.
+    
+    Processes an incoming audio message by validating the user session and time window, extracting the audio file ID and title, and attempting to add the track to the playlist stored in the per-user session context. Sends user-facing messages for each outcome (success, duplicate track, failure, expired session, or missing session) and clears the FSM state when the session is invalid or expired. On success, increments the session's tracks_added counter.
+    
+    Parameters:
+        message (Message): The incoming Telegram message containing the forwarded audio.
+        state (FSMContext): The user's FSM context; may be cleared when the session is absent or expired.
+    """
     user_id = get_user_id(message)
     user_db_id = get_db_user_id(user_id)
     context = user_contexts.get(user_id)
@@ -143,6 +167,18 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
 
 @add_track_router.callback_query(F.data.startswith("add_music:"))
 async def handle_add_track_inline(callback: CallbackQuery):
+    """
+    Edit the originating message to instruct the user how to add tracks to a specific playlist and acknowledge the callback.
+    
+    This handler expects callback.data in the form "prefix:playlist_name" (the playlist name is taken from the substring after the first colon).
+    It edits the callback's message text to tell the user to forward audio files and send the playlist name (no button press required), then answers the callback.
+    
+    Parameters:
+        callback (CallbackQuery): The incoming callback query whose data contains the playlist name.
+    
+    Returns:
+        The result of callback.answer() (typically None).
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
     edit_text_message = get_edit_text_message(callback_message)

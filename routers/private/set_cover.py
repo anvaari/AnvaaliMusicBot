@@ -18,6 +18,15 @@ set_cover_router = Router()
 
 @set_cover_router.callback_query(F.data.startswith("set_cover:"))
 async def handle_set_cover_callback(callback: CallbackQuery, state: FSMContext):
+    """
+    Handle a "set_cover:<playlist>" callback: prompt the user to send a photo to set the playlist cover.
+    
+    Stores the target playlist name in the FSM under the key "playlist_name_to_set_cover", transitions the FSM to PlaylistStates.waiting_for_cover_image, edits the originating callback message to instruct the user to send a photo (not a file; if an album is sent the first photo will be used), and answers the callback to acknowledge it.
+    
+    Parameters:
+        callback (CallbackQuery): Incoming callback query whose data starts with "set_cover:".
+        state (FSMContext): FSM context used to store the playlist name and set the next state.
+    """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
     edit_text_message = get_edit_text_message(callback_message)
@@ -37,6 +46,20 @@ async def handle_set_cover_callback(callback: CallbackQuery, state: FSMContext):
 
 @set_cover_router.message(PlaylistStates.waiting_for_cover_image)
 async def process_add_cover_to_playlist(message: Message, state: FSMContext):
+    """
+    Handle a photo message to set a playlist cover image.
+    
+    When the FSM is in PlaylistStates.waiting_for_cover_image, this retrieves the target
+    playlist name from the FSM state, verifies the incoming message contains a photo,
+    resolves the calling user's database ID, and attempts to set the playlist's cover
+    image using the photo's file_id. Clears the FSM state before returning.
+    
+    Parameters:
+        message (Message): Incoming Telegram message that should contain a photo. If the
+            message contains an album, the last photo (highest resolution) is used.
+        state (FSMContext): FSM context containing "playlist_name_to_set_cover" with the
+            target playlist name. The state is cleared by this handler in all outcomes.
+    """
     user_id = get_user_id(message)
     user_db_id = ps.get_user_id(user_id)
     
