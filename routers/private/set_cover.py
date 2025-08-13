@@ -49,12 +49,15 @@ async def process_add_cover_to_playlist(message: Message, state: FSMContext):
 
     file_id = message.photo[-1].file_id
     cover_set = ps.set_cover_image(user_db_id, playlist_name, file_id)
-    if cover_set:
+    if cover_set is True:
         logger.debug(f"User:{user_id} set file with id={file_id} as cover image for {playlist_name} playlist")
         await message.answer(f"✅ Cover image set for '{playlist_name}'")
-    else:
-        logger.error(f"Can't set cover image with file_id={file_id} for {playlist_name} for user_id={user_id}")
+    elif cover_set is False:
+        logger.error(f"Failed to set cover image with file_id={file_id} for {playlist_name} for user_id={user_id}")
         await message.answer(f"❌ Failed to set image for '{playlist_name}'")
+    else:
+        logger.error(f"Database error while setting cover for playlist '{playlist_name}' for user {user_id}")
+        await message.answer(f"❌ Database error. Please try again.")
     return await state.clear()
 
     
