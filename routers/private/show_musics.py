@@ -49,8 +49,7 @@ async def show_playlist(callback: CallbackQuery):
         logger.error(f"Database error while fetching tracks for playlist '{playlist_name}' for user {user_id}")
         await edit_text_message(f"{EMOJIS.FAIL.value} Error retrieving playlist '{playlist_name}'. Please try again.")
         return await callback.answer()
-    
-    if tracks is False:
+    elif not tracks:
         logger.warning(f"User {user_id} tried to show non-existent or empty playlist '{playlist_name}'")
         await edit_text_message(f"{EMOJIS.FAIL.value} Playlist '{playlist_name}' is empty.")
         return await callback.answer()

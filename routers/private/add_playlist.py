@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 add_playlist_router = Router()
 
-@add_playlist_router.message(F.text == f"{EMOJIS.ADD.value} New Playlist")
+@add_playlist_router.message(F.text == f"{EMOJIS.NEW.value} New Playlist")
 async def cmd_new_playlist(message: Message, state: FSMContext):
     """
     Prompt the user to enter a name for a new playlist and set the FSM to wait for that input.

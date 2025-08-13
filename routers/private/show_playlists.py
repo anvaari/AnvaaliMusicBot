@@ -39,7 +39,7 @@ async def show_all_playlists(message: Message):
     if playlists is None:
         logger.error(f"Failed to fetch playlists for user_id={user_id} (db_id={user_db_id})")
         return await message.answer(f"{EMOJIS.WARN.value} Something went wrong. Please try again.")
-    if playlists is False:
+    elif  not playlists:
         return await message.answer(f"{EMOJIS.FAIL.value} No playlists yet. Use `➕ New Playlist` button to add one.")
     await message.answer(f"{EMOJIS.HEADPHONE.value} Your playlists", reply_markup=get_playlist_list_keyboard(playlists))
 
