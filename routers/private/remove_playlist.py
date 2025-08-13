@@ -45,6 +45,10 @@ async def delete_confirm_action(callback: CallbackQuery):
 
     edit_text_message = get_edit_text_message(callback_message)
 
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
     success = ps.delete_playlist(user_db_id, playlist_name)
     if success is True:
         logger.info(f"User {user_id} deleted playlist '{playlist_name}'")

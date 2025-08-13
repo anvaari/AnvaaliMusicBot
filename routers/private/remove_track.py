@@ -30,6 +30,10 @@ async def delete_track_handler(callback: CallbackQuery,state: FSMContext):
 
     user_db_id = ps.get_user_id(user_id)
     tracks = ps.get_tracks(playlist_name, user_db_id)
+
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
     
     if not tracks:
         logger.warning(f"User {user_id} tried to show non-existent or empty playlist '{playlist_name}'")
@@ -61,6 +65,10 @@ async def delete_track(callback: CallbackQuery, state: FSMContext):
     track_index = int(callback_text.split(":")[1])
 
     user_db_id = ps.get_user_id(user_id)
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
 
     success = ps.remove_track_by_index(user_db_id, playlist_name, track_index)
     if success is True:

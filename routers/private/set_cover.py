@@ -43,6 +43,10 @@ async def process_add_cover_to_playlist(message: Message, state: FSMContext):
     state_data = await state.get_data()
     playlist_name = state_data["playlist_name_to_set_cover"]
 
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await message.answer(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
     if message.photo is None:
         logger.warning(f"User:{user_id} tried to add cover image with message other than photo.")
         await state.clear()

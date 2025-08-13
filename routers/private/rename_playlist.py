@@ -41,6 +41,10 @@ async def process_rename_playlist(message: Message, state: FSMContext):
     old_name = state_data["playlist_name_to_rename"]
     new_name = get_message_text_safe(message)
 
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await message.answer(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
     new_playlist_exists = ps.get_playlist_id_by_name(user_db_id, new_name)
     if new_playlist_exists:
         logger.warning(f"User {user_id} tried to rename to existing playlist '{new_name}'")

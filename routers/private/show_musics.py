@@ -32,6 +32,10 @@ async def show_playlist(callback: CallbackQuery):
     tracks = ps.get_tracks(playlist_name, user_db_id)
     playlist_id = ps.get_playlist_id_by_name(user_db_id,playlist_name)
     
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
     if tracks is None:
         logger.error(f"Database error while fetching tracks for playlist '{playlist_name}' for user {user_id}")
         await edit_text_message(f"{EMOJIS.FAIL.value} Error retrieving playlist '{playlist_name}'. Please try again.")

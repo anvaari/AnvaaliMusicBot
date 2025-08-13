@@ -50,6 +50,10 @@ async def store_playlist_name(message: Message,state: FSMContext):
     user_db_id = get_db_user_id(user_id)
     message_text = get_message_text_safe(message)
 
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await message.answer(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
     playlist_name = message_text.strip()
     if not playlist_name:
         await message.answer(f"{EMOJIS.FAIL.value} Please provide a valid playlist name.")
@@ -85,6 +89,10 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
     user_id = get_user_id(message)
     user_db_id = get_db_user_id(user_id)
     context = user_contexts.get(user_id)
+
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await message.answer(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
 
     if not context or not context.get("playlist_name"):
         await message.answer(f"{EMOJIS.FAIL.value} No active playlist session. Send playlist name first.")

@@ -21,7 +21,10 @@ async def show_all_playlists(message: Message):
     user_id = get_user_id(message)
     user_db_id = ps.get_user_id(user_id)
     
-    playlists = ps.get_playlists(user_db_id)
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await message.answer(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+
     playlists = ps.get_playlists(user_db_id)
     if playlists is None:
         logger.error(f"Failed to fetch playlists for user_id={user_id} (db_id={user_db_id})")

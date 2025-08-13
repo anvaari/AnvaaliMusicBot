@@ -24,6 +24,9 @@ async def process_new_playlist(message: Message, state: FSMContext):
         return await message.answer(f"{EMOJIS.FAIL.value} Playlist name cannot be empty. Please enter a valid name.")
     user_id = get_user_id(message)
     user_db_id = ps.get_user_id(user_id)
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await message.answer(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
     result = ps.create_playlist(user_db_id,playlist_name)
     if result is True:
         logger.info(f"User {user_id} created playlist '{playlist_name}'")
