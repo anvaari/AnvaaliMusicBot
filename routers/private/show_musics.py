@@ -42,7 +42,8 @@ async def show_playlist(callback: CallbackQuery):
     
     if user_db_id is None:
         logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
-        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+        await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+        return await callback.answer()
 
     if tracks is None:
         logger.error(f"Database error while fetching tracks for playlist '{playlist_name}' for user {user_id}")

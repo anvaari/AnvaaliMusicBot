@@ -47,7 +47,8 @@ async def share_playlist(callback: CallbackQuery, bot: Bot):
 
     if user_db_id is None:
         logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
-        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+        await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")
+        return await callback.answer()
 
     if playlist_id is None:
         logger.error(f"DB error while resolving playlist_id for user={user_id}, name='{playlist_name}'")

@@ -73,7 +73,7 @@ async def process_add_cover_to_playlist(message: Message, state: FSMContext):
     if message.photo is None:
         logger.warning(f"User:{user_id} tried to add cover image with message other than photo.")
         await state.clear()
-        return await message.answer("{EMOJIS.FAIL.value} Please send photo, Can't set this message as cover photo")
+        return await message.answer(f"{EMOJIS.FAIL.value} Please send photo, Can't set this message as cover photo")
 
     file_id = message.photo[-1].file_id
     cover_set = ps.set_cover_image(user_db_id, playlist_name, file_id)
