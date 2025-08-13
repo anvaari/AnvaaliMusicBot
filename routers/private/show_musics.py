@@ -31,7 +31,12 @@ async def show_playlist(callback: CallbackQuery):
     tracks = ps.get_tracks(playlist_name, user_db_id)
     playlist_id = ps.get_playlist_id_by_name(user_db_id,playlist_name)
     
-    if not tracks:
+    if tracks is None:
+        logger.error(f"Database error while fetching tracks for playlist '{playlist_name}' for user {user_id}")
+        await edit_text_message(f"❌ Error retrieving playlist '{playlist_name}'. Please try again.")
+        return await callback.answer()
+    
+    if tracks is False:
         logger.warning(f"User {user_id} tried to show non-existent or empty playlist '{playlist_name}'")
         await edit_text_message(f"❌ Playlist '{playlist_name}' is empty.")
         return await callback.answer()
@@ -46,8 +51,8 @@ async def show_playlist(callback: CallbackQuery):
         await edit_text_message(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks")
 
     for i in range(0, len(tracks), 10):
-        batch = tracks[i:i + 10]
-        media = [InputMediaAudio(media=file_id,caption=f"Index: {i+index}") for index,file_id in enumerate(batch)]
+        batch = tracks[i:i  10]
+        media = [InputMediaAudio(media=file_id,caption=f"Index: {iindex}") for index,file_id in enumerate(batch)]
         await callback_message.answer_media_group(media) # type: ignore
     
     await callback.answer()
