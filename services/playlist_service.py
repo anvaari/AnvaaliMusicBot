@@ -89,6 +89,12 @@ def add_track(playlist_name, user_id, file_id):
                      or None if a database error occurred.
     """
     playlist_id = get_playlist_id_by_name(user_id,playlist_name)
+    if playlist_id is None:
+        logger.error(f"DB error resolving playlist_id for user_id={user_id}, name='{playlist_name}'")
+        return None
+    if playlist_id is False:
+        logger.warning(f"Playlist '{playlist_name}' not found for user_id={user_id}")
+        return False
     try:
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
@@ -330,8 +336,10 @@ def delete_playlist(user_id, playlist_name):
         False if the playlist was not found for the given user.
         None if a database error occurred during deletion.
     """
-    playlist_id = get_playlist_id_by_name(user_id,playlist_name)
-    if not playlist_id:
+    playlist_id = get_playlist_id_by_name(user_id, playlist_name)
+    if playlist_id is None:
+        return None
+    if playlist_id is False:
         return False
     try:
         with sqlite3.connect(sqlite_db_path) as conn:

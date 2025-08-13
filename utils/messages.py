@@ -32,4 +32,4 @@ def is_text_starts_with_emoji(text: str) -> bool:
     text = text.strip()
     if not text:
         return False
-    return text[0] in EMOJIS._value2member_map_
+    return any(text.startswith(e.value) for e in EMOJIS)
