@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 import services.playlist_service as ps
 from states.user import PlaylistStates
 from utils.logging import get_logger
+from utils.messages import EMOJIS
 from utils.typing import (
     get_user_id,
     get_callback_text_safe,
@@ -32,7 +33,7 @@ async def delete_track_handler(callback: CallbackQuery,state: FSMContext):
     
     if not tracks:
         logger.warning(f"User {user_id} tried to show non-existent or empty playlist '{playlist_name}'")
-        await edit_text_message("Playlist is empty")
+        await edit_text_message(f"{EMOJIS.FAIL.value} Playlist is empty")
         return await callback.answer()
         
     music_remove_keyboard = get_music_remove_list_keyboard(list(range(len(tracks))))
@@ -40,7 +41,7 @@ async def delete_track_handler(callback: CallbackQuery,state: FSMContext):
     await state.set_state(PlaylistStates.waiting_for_delete_track)
     await state.set_data(data={"playlist_to_remove_track":playlist_name})
     await edit_text_message(
-        "Please Choose track index from below list to remove.\n"
+        f"{EMOJIS.LIST_WITH_PEN.value} Please Choose track index from below list to remove.\n"
         "You can see index numbers by tap on *📋 Show Musics* button"
         )
     await edit_markup_message(reply_markup=music_remove_keyboard)
@@ -64,18 +65,18 @@ async def delete_track(callback: CallbackQuery, state: FSMContext):
     success = ps.remove_track_by_index(user_db_id, playlist_name, track_index)
     if success is True:
         logger.info(f"User {user_id} removed track #{track_index} from '{playlist_name}'")
-        await edit_text_message(f"✅ Track #{track_index} removed from '{playlist_name}'.")
+        await edit_text_message(f"{EMOJIS.CHECK_MARK.value} Track #{track_index} removed from '{playlist_name}'.")
     elif success is None:
         logger.error(
             f"DB error removing track #{track_index} from '{playlist_name}' "
             f"for user_id={user_id} (db_id={user_db_id})"
         )
-        await edit_text_message("⚠️ Something went wrong. Please try again.")
+        await edit_text_message(f"{EMOJIS.WARN.value} Something went wrong. Please try again.")
     else:
         logger.warning(
             f"Track #{track_index} not found in '{playlist_name}' for user_id={user_id}"
         )
-        await edit_text_message(f"❌ Can't remove track #{track_index} from '{playlist_name}'.")
+        await edit_text_message(f"{EMOJIS.FAIL.value} Can't remove track #{track_index} from '{playlist_name}'.")
     
     await state.clear()
     return await callback.answer()

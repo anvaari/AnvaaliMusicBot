@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from states.user import PlaylistStates
 import services.playlist_service as ps
 from utils.logging import get_logger
+from utils.messages import EMOJIS
 from utils.typing import (
     get_user_id,
     get_callback_message,
@@ -29,7 +30,7 @@ async def handle_set_cover_callback(callback: CallbackQuery, state: FSMContext):
     await state.set_data(data={"playlist_name_to_set_cover":playlist_name})
     await state.set_state(PlaylistStates.waiting_for_cover_image)
     await edit_text_message(
-        f"📸 Send photo to set as cover image for **{playlist_name}**.\n"
+        f"{EMOJIS.CAMERA.value} Send photo to set as cover image for **{playlist_name}**.\n"
         "Attention, send photo not file. If you send album, first one will be used."
     )
     return await callback.answer()
@@ -45,19 +46,19 @@ async def process_add_cover_to_playlist(message: Message, state: FSMContext):
     if message.photo is None:
         logger.warning(f"User:{user_id} tried to add cover image with message other than photo.")
         await state.clear()
-        return await message.answer("❌ Please send photo, Can't set this message as cover photo")
+        return await message.answer("{EMOJIS.FAIL.value} Please send photo, Can't set this message as cover photo")
 
     file_id = message.photo[-1].file_id
     cover_set = ps.set_cover_image(user_db_id, playlist_name, file_id)
     if cover_set is True:
         logger.debug(f"User:{user_id} set file with id={file_id} as cover image for {playlist_name} playlist")
-        await message.answer(f"✅ Cover image set for '{playlist_name}'")
+        await message.answer(f"{EMOJIS.CHECK_MARK.value} Cover image set for '{playlist_name}'")
     elif cover_set is False:
         logger.error(f"Failed to set cover image with file_id={file_id} for {playlist_name} for user_id={user_id}")
-        await message.answer(f"❌ Failed to set image for '{playlist_name}'")
+        await message.answer(f"{EMOJIS.FAIL.value} Failed to set image for '{playlist_name}'")
     else:
         logger.error(f"Database error while setting cover for playlist '{playlist_name}' for user {user_id}")
-        await message.answer(f"❌ Database error. Please try again.")
+        await message.answer(f"{EMOJIS.FAIL.value} Database error. Please try again.")
     return await state.clear()
 
     

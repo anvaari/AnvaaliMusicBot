@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from collections import defaultdict
 import time
 from typing import Dict, Any
+from utils.messages import EMOJIS
 from utils.typing import (
     get_user_id,
     get_message_text_safe,
@@ -51,14 +52,14 @@ async def store_playlist_name(message: Message,state: FSMContext):
 
     playlist_name = message_text.strip()
     if not playlist_name:
-        await message.answer("❌ Please provide a valid playlist name.")
+        await message.answer(f"{EMOJIS.FAIL.value} Please provide a valid playlist name.")
         return
 
     playlist_db_id = get_playlist_id_by_name(user_db_id,playlist_name)
     if playlist_db_id == False:
         logger.warning(f"User {user_id} tried to add to non-existent playlist '{playlist_name}'")
         await message.answer(
-            f"❌ Playlist with name `{playlist_name}` is not exist for this user."
+            f"{EMOJIS.FAIL.value} Playlist with name `{playlist_name}` is not exist for this user."
         )
         return
 
@@ -74,8 +75,8 @@ async def store_playlist_name(message: Message,state: FSMContext):
     
     logger.info(f"User {user_id} started adding music to '{playlist_name}'")
     await message.answer(
-        f"🎵 Ready to add tracks to playlist: **{playlist_name}**\n"
-        f"⏰ Forward audio files within {app_config.ADD_TRACK_TIME_WINDOW} seconds\n"
+        f"{EMOJIS.MUSIC.value} Ready to add tracks to playlist: **{playlist_name}**\n"
+        f"{EMOJIS.CLOCK.value} Forward audio files within {app_config.ADD_TRACK_TIME_WINDOW} seconds\n"
     )
 
 
@@ -86,7 +87,7 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
     context = user_contexts.get(user_id)
 
     if not context or not context.get("playlist_name"):
-        await message.answer("❌ No active playlist session. Send playlist name first.")
+        await message.answer(f"{EMOJIS.FAIL.value} No active playlist session. Send playlist name first.")
         await state.clear()
         return
     
@@ -94,8 +95,8 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
     if time.time() - context['timestamp'] > app_config.ADD_TRACK_TIME_WINDOW:
         logger.info(f"Time window expired for user {user_id}")
         await message.answer(
-            f"⏰ Time window expired ({app_config.ADD_TRACK_TIME_WINDOW}s)\n"
-            f"📝 Send the playlist name again to continue adding tracks."
+            f"{EMOJIS.CLOCK.value} Time window expired ({app_config.ADD_TRACK_TIME_WINDOW}s)\n"
+            f"{EMOJIS.LIST_WITH_PEN.value} Send the playlist name again to continue adding tracks."
         )
         user_contexts[user_id] = {
             "playlist_name": None,
@@ -114,19 +115,19 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
     if track_added is None:
         logger.error(f"Failed to add '{audio_title}' to {playlist_name} for user '{user_id}'.",exc_info=True)
         await message.answer(
-            f"❌ Failed to add '{audio_title}' to {playlist_name}."
+            f"{EMOJIS.FAIL.value} Failed to add '{audio_title}' to {playlist_name}."
         )
     elif track_added == False:
         await message.answer(
-            f"❌ Track with title='{audio_title}' already exists in **{playlist_name}** playlist."
+            f"{EMOJIS.FAIL.value} Track with title='{audio_title}' already exists in **{playlist_name}** playlist."
         )
     else:
         context["tracks_added"] += 1
         
         await message.answer(
-            f"✅ Added: **{audio_title}**\n"
-            f"📂 To playlist: '{playlist_name}'\n"
-            f"🎵 Total added this session: {context['tracks_added']}"
+            f"{EMOJIS.CHECK_MARK.value} Added: **{audio_title}**\n"
+            f"{EMOJIS.FILE.value} To playlist: '{playlist_name}'\n"
+            f"{EMOJIS.MUSIC.value} Total added this session: {context['tracks_added']}"
         )
         
         logger.info(f"User {user_id} added '{audio_title}' with file_id '{audio_file_id}' to '{playlist_name}'")
@@ -141,7 +142,7 @@ async def handle_add_track_inline(callback: CallbackQuery):
     playlist_name = callback_text.split(":")[1]
     
     await edit_text_message(
-        f"To add track to `{playlist_name}` "
+        f"{EMOJIS.LIST_WITH_PEN.value} To add track to `{playlist_name}` "
         f"just forward tracks and type `{playlist_name}` "
         "as message, no need to press any button."
     )

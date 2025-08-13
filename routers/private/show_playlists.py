@@ -3,6 +3,7 @@ from aiogram.types import Message,CallbackQuery
 from keyboards.inline import get_playlist_list_keyboard,get_playlist_actions_keyboard
 import services.playlist_service as ps
 from utils.logging import get_logger
+from utils.messages import EMOJIS
 from utils.typing import (
     get_user_id,
     get_callback_text_safe,
@@ -15,7 +16,7 @@ logger = get_logger(__name__)
 
 show_playlist_router = Router()
 
-@show_playlist_router.message(F.text == "🎧 My Playlists")
+@show_playlist_router.message(F.text == f"{EMOJIS.HEADPHONE.value} My Playlists")
 async def show_all_playlists(message: Message):
     user_id = get_user_id(message)
     user_db_id = ps.get_user_id(user_id)
@@ -24,10 +25,10 @@ async def show_all_playlists(message: Message):
     playlists = ps.get_playlists(user_db_id)
     if playlists is None:
         logger.error(f"Failed to fetch playlists for user_id={user_id} (db_id={user_db_id})")
-        return await message.answer("⚠️ Something went wrong. Please try again.")
+        return await message.answer(f"{EMOJIS.WARN.value} Something went wrong. Please try again.")
     if playlists is False:
-        return await message.answer("No playlists yet. Use `➕ New Playlist` button to add one.")
-    await message.answer("🎧 Your playlists", reply_markup=get_playlist_list_keyboard(playlists))
+        return await message.answer(f"{EMOJIS.FAIL.value} No playlists yet. Use `➕ New Playlist` button to add one.")
+    await message.answer(f"{EMOJIS.HEADPHONE.value} Your playlists", reply_markup=get_playlist_list_keyboard(playlists))
 
 @show_playlist_router.callback_query(F.data.startswith("use_playlist:"))
 async def show_playlist_action_kb(callback: CallbackQuery):
@@ -40,7 +41,7 @@ async def show_playlist_action_kb(callback: CallbackQuery):
     edit_text_message = get_edit_text_message(callback_message)
     edit_markup_message = get_edit_markup_message(callback_message)
 
-    await edit_text_message(f"Select action for playlist '{playlist_name}':")
+    await edit_text_message(f"{EMOJIS.PEN.value} Select action for playlist '{playlist_name}':")
     await edit_markup_message(reply_markup=get_playlist_actions_keyboard(playlist_name))
 
     await callback.answer()

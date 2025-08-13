@@ -16,6 +16,11 @@ class EMOJIS(str, Enum):
     PHOTO = '🖼️'
     NEW = '🆕'
     DANGER = '☠'
+    PEN = '✍🏻'
+    WARN = '⚠️'
+    CLOCK = '⏰'
+    QUESTION = '?'
+    HUG = '🫂'
 
 
 def is_text_starts_with_emoji(text: str) -> bool:

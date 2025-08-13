@@ -2,6 +2,7 @@ from aiogram import Router, F
 from aiogram.types import InputMediaAudio,CallbackQuery,InputMediaPhoto
 import services.playlist_service as ps
 from utils.logging import get_logger
+from utils.messages import EMOJIS
 from utils.typing import (
     get_user_id,
     get_callback_text_safe,
@@ -33,12 +34,12 @@ async def show_playlist(callback: CallbackQuery):
     
     if tracks is None:
         logger.error(f"Database error while fetching tracks for playlist '{playlist_name}' for user {user_id}")
-        await edit_text_message(f"❌ Error retrieving playlist '{playlist_name}'. Please try again.")
+        await edit_text_message(f"{EMOJIS.FAIL.value} Error retrieving playlist '{playlist_name}'. Please try again.")
         return await callback.answer()
     
     if tracks is False:
         logger.warning(f"User {user_id} tried to show non-existent or empty playlist '{playlist_name}'")
-        await edit_text_message(f"❌ Playlist '{playlist_name}' is empty.")
+        await edit_text_message(f"{EMOJIS.FAIL.value} Playlist '{playlist_name}' is empty.")
         return await callback.answer()
     
     logger.info(f"User {user_id} is viewing playlist '{playlist_name}'")
@@ -46,9 +47,9 @@ async def show_playlist(callback: CallbackQuery):
     playlist_cover_file_id = ps.get_cover_image_by_playlist_id(playlist_id)
     if playlist_cover_file_id:
         await edit_photo_message(media=InputMediaPhoto(media=playlist_cover_file_id))
-        await edit_caption_message(caption=f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks")
+        await edit_caption_message(caption=f"{EMOJIS.HEADPHONE.value} Playlist '{playlist_name}' with {len(tracks)} tracks")
     else:
-        await edit_text_message(f"🎧 Playlist '{playlist_name}' with {len(tracks)} tracks")
+        await edit_text_message(f"{EMOJIS.HEADPHONE.value} Playlist '{playlist_name}' with {len(tracks)} tracks")
 
     for i in range(0, len(tracks), 10):
         batch = tracks[i:i + 10]

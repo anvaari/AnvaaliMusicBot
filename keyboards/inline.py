@@ -1,23 +1,24 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from utils.messages import EMOJIS
 
 # Inline keyboard for playlist actions after creation or show
 def get_playlist_actions_keyboard(playlist_name: str):
     inline_keyboard = [
         [
-            InlineKeyboardButton(text="➕ Add Music", callback_data=f"add_music:{playlist_name}"),
-            InlineKeyboardButton(text="📋 Show Musics", callback_data=f"show:{playlist_name}")
+            InlineKeyboardButton(text=f"{EMOJIS.ADD.value} Add Music", callback_data=f"add_music:{playlist_name}"),
+            InlineKeyboardButton(text=f"{EMOJIS.LIST.value} Show Musics", callback_data=f"show:{playlist_name}")
         ],
         [
-            InlineKeyboardButton(text="☠️ Delete Track", callback_data=f"delete_track:{playlist_name}"),
-            InlineKeyboardButton(text="☠️ Delete Playlist", callback_data=f"delete_playlist:{playlist_name}"),
+            InlineKeyboardButton(text=f"{EMOJIS.DANGER.value} Delete Track", callback_data=f"delete_track:{playlist_name}"),
+            InlineKeyboardButton(text=f"{EMOJIS.DANGER.value} Delete Playlist", callback_data=f"delete_playlist:{playlist_name}"),
         ],
         [
-            InlineKeyboardButton(text="⌨ Rename Playlist", callback_data=f"rename:{playlist_name}")
+            InlineKeyboardButton(text=f"{EMOJIS.PEN.value} Rename Playlist", callback_data=f"rename:{playlist_name}")
 
         ],
         [
-            InlineKeyboardButton(text="🖼️ Set Cover", callback_data=f"set_cover:{playlist_name}"),
-            InlineKeyboardButton(text="🔗 Share Playlist", callback_data=f"share:{playlist_name}")
+            InlineKeyboardButton(text=f"{EMOJIS.PHOTO.value} Set Cover", callback_data=f"set_cover:{playlist_name}"),
+            InlineKeyboardButton(text=f"{EMOJIS.LINK.value} Share Playlist", callback_data=f"share:{playlist_name}")
         ],
         [
         ]
@@ -58,8 +59,8 @@ def get_playlist_delete_confirmation_keyboard(playlist_name: str):
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Confirm Delete", callback_data=f"confirm_delete:{playlist_name}"),
-                InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_delete")
+                InlineKeyboardButton(text=f"{EMOJIS.CHECK_MARK.value} Confirm Delete", callback_data=f"confirm_delete:{playlist_name}"),
+                InlineKeyboardButton(text=f"{EMOJIS.FAIL.value} Cancel", callback_data="cancel_delete")
             ],
             
 

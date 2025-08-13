@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from states.user import PlaylistStates
 import services.playlist_service as ps
 from utils.logging import get_logger
+from utils.messages import EMOJIS
 from utils.typing import (
     get_user_id,
     get_message_text_safe,
@@ -27,7 +28,7 @@ async def handle_rename_callback(callback: CallbackQuery, state: FSMContext):
     await state.set_data(data={"playlist_name_to_rename":playlist_name})
     await state.set_state(PlaylistStates.waiting_for_rename)
 
-    await edit_text_message(f"🆕 Enter new name for {playlist_name}")
+    await edit_text_message(f"{EMOJIS.NEW.value} Enter new name for {playlist_name}")
     return await callback.answer()
 
 @rename_playlist_router.message(PlaylistStates.waiting_for_rename)
@@ -44,9 +45,9 @@ async def process_rename_playlist(message: Message, state: FSMContext):
     if new_playlist_exists:
         logger.warning(f"User {user_id} tried to rename to existing playlist '{new_name}'")
         await state.clear()
-        return await message.answer(f"❌ `{new_name}` already exists, can't rename.")
+        return await message.answer(f"{EMOJIS.FAIL.value} `{new_name}` already exists, can't rename.")
     
     ps.rename_playlist(user_db_id, old_name, new_name)
     await state.clear()
     logger.info(f"User {user_id} renamed playlist '{old_name}' to '{new_name}'")
-    return await message.answer(f"✅ Playlist renamed from '{old_name}' to '{new_name}'.")
+    return await message.answer(f"{EMOJIS.CHECK_MARK.value} Playlist renamed from '{old_name}' to '{new_name}'.")
