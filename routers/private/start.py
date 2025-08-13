@@ -1,5 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message, InputMediaAudio
+import re
 from keyboards.reply import get_main_menu
 import services.playlist_service as ps
 from utils.logging import get_logger
@@ -38,12 +39,23 @@ async def cmd_start(message: Message):
             return await message.answer("Thought it was playlist link but got invalid playlist link. Choose an option to interact with bot:", reply_markup=get_main_menu())
 
         playlist_name = ps.get_playlist_name_by_id(playlist_id)
+        if playlist_name is None:
+            logger.error(f"Can't get playlist name for playlist_id={playlist_id}")
+            return await message.answer("❌ Can't retrieve playlist name from database, try again!")
+        elif playlist_name is False:
+            logger.error(f"User with user_id={user_id} tried to start bot with unknown playlist_id ({playlist_id}.)")
+            return await message.answer("❌ Invalid share link, requested playlist does not exist.")
+        
         tracks = ps.get_tracks_by_playlist_id(playlist_id)
         if not tracks:
             logger.warning(f"User with id {user_id} start bot with share link but playlist was empty.\nShare link: {message_text}")
             return await message.answer("Playlist is empty or not found.")
 
-        await message.answer(f"🎧 **{playlist_name}** Playlist shared with you:")
+        escaped_name = re.sub(
+            pattern=r'([*_`\[\]])',
+            repl=r'\\\1', 
+            string=playlist_name)
+        await message.answer(f"🎧 **{escaped_name}** Playlist shared with you:")
         cover = ps.get_cover_image_by_playlist_id(playlist_id)
         if cover:
             await message.answer_photo(cover, caption="🎵 Playlist Cover")
