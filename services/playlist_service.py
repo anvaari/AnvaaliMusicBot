@@ -15,7 +15,7 @@ def add_user(telegram_id:int) -> None :
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("INSERT OR IGNORE INTO users (telegram_id) VALUES (?)", (telegram_id,))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to add {telegram_id} to users table",exc_info=True)
     else:
         logger.debug(f"{telegram_id} user added successfully")
@@ -32,7 +32,7 @@ def get_user_id(telegram_id):
             cur= conn.cursor()
             cur.execute("SELECT id FROM users WHERE telegram_id=?", (telegram_id,))
             res = cur.fetchone()
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get id of user with Telegram ID = {telegram_id}")
         return None
     else:
@@ -55,7 +55,7 @@ def create_playlist(user_id, name):
     except sqlite3.IntegrityError:
         logger.debug(f"{name} playlist already exists for user_id = {user_id}")
         return False
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to create a {name} playlist for user_id = {user_id}",exc_info=True)
         return None
     else:
@@ -81,7 +81,7 @@ def add_track(playlist_name, user_id, file_id):
     except sqlite3.IntegrityError:
         logger.info(f"Track with file_id={file_id} already exists for {playlist_name} playlist for user_id={user_id}")
         return False
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to add track with file_id = {file_id} to playlist {playlist_name} for user_id = {user_id}",exc_info=True)
         return None
     else:
@@ -102,7 +102,7 @@ def get_playlists(user_id):
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("SELECT name FROM playlists WHERE user_id=?", (user_id,))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get playlists for user_id = {user_id}",exc_info=True)
         return None
     else:
@@ -128,7 +128,7 @@ def get_tracks(playlist_name, user_id):
                 JOIN playlists p ON p.id = t.playlist_id
                 WHERE p.name=? AND p.user_id=?
             """, (playlist_name, user_id))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get tracks from {playlist_name} playlist for user_id = {user_id}",exc_info=True)
         return None
     else:
@@ -149,7 +149,7 @@ def get_playlist_id_by_name(user_id, name):
             cur= conn.cursor()
             cur.execute("SELECT id FROM playlists WHERE user_id=? AND name=?", (user_id, name))
             res = cur.fetchone()
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get playlist ID for {name} playlist from user_id = {user_id}",exc_info=True)
         return None
     else:
@@ -170,7 +170,7 @@ def get_playlist_name_by_id(playlist_id:int):
             cur= conn.cursor()
             cur.execute("SELECT name FROM playlists WHERE id=?", (playlist_id,))
             res = cur.fetchone()
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get playlist Name for id={playlist_id}",exc_info=True)
         return None
     else:
@@ -191,7 +191,7 @@ def get_tracks_by_playlist_id(playlist_id):
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("SELECT file_id FROM tracks WHERE playlist_id=?", (playlist_id,))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get tracks from playlist_id = {playlist_id}",exc_info=True)
         return None
     else:
@@ -211,7 +211,7 @@ def set_cover_image(user_id, playlist_name, file_id):
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("UPDATE playlists SET cover_file_id=? WHERE user_id=? AND name=?", (file_id, user_id, playlist_name))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to set cover with file_id = {file_id} in {playlist_name} for user_id = {user_id}",exc_info=True)
         return False
     else:
@@ -233,7 +233,7 @@ def get_cover_image_by_playlist_id(playlist_id):
             cur= conn.cursor()
             cur.execute("SELECT cover_file_id FROM playlists WHERE id=?", (playlist_id,))
             res = cur.fetchone()
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get cover image file_id for playlist_id = {playlist_id}",exc_info=True)
         return None
     else:
@@ -261,7 +261,7 @@ def remove_track_by_index(user_id, playlist_name, index):
             cur= conn.cursor()
             cur.execute("SELECT id FROM tracks WHERE playlist_id=? ORDER BY id LIMIT 1 OFFSET ?", (playlist_id, index))
             track = cur.fetchone()
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to get track_id from tracks table for playlist_id = {playlist_id}",exc_info=True)
         return None
     else:
@@ -273,7 +273,7 @@ def remove_track_by_index(user_id, playlist_name, index):
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("DELETE FROM tracks WHERE id=?", (track_id,))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to delete track_id = {track_id} from tracks table",exc_info=True)
         return None
     else:
@@ -298,7 +298,7 @@ def delete_playlist(user_id, playlist_name):
             cur= conn.cursor()
             cur.execute("DELETE FROM tracks WHERE playlist_id=?", (playlist_id,))
             cur.execute("DELETE FROM playlists WHERE id=?", (playlist_id,))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to remove tracks from {playlist_name} playlist.",exc_info=True)
         return None
     else:
@@ -321,7 +321,7 @@ def rename_playlist(user_id, old_name, new_name):
         with sqlite3.connect(sqlite_db_path) as conn:
             cur= conn.cursor()
             cur.execute("UPDATE playlists SET name=? WHERE user_id=? AND name=?", (new_name, user_id, old_name))
-    except:
+    except sqlite3.Error:
         logger.error(f"Failed to rename {old_name} playlist to {new_name} for user_id = {user_id}",exc_info=True)
     else:
         logger.debug(f"Successfully rename {old_name} playlist to {new_name} for user_id = {user_id}") 
