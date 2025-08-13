@@ -21,10 +21,13 @@ async def show_all_playlists(message: Message):
     user_db_id = ps.get_user_id(user_id)
     
     playlists = ps.get_playlists(user_db_id)
-    if not playlists:
-        await message.answer("No playlists yet. Use `➕ New Playlist` button to add one.")
-    else:
-        await message.answer("🎧 Your playlists",reply_markup=get_playlist_list_keyboard(playlists))
+    playlists = ps.get_playlists(user_db_id)
+    if playlists is None:
+        logger.error(f"Failed to fetch playlists for user_id={user_id} (db_id={user_db_id})")
+        return await message.answer("⚠️ Something went wrong. Please try again.")
+    if playlists is False:
+        return await message.answer("No playlists yet. Use `➕ New Playlist` button to add one.")
+    await message.answer("🎧 Your playlists", reply_markup=get_playlist_list_keyboard(playlists))
 
 @show_playlist_router.callback_query(F.data.startswith("use_playlist:"))
 async def show_playlist_action_kb(callback: CallbackQuery):
