@@ -1,4 +1,4 @@
-# 🎵 Anvaali Music Bot
+# 🎵 Bilbo Music Bot
 
 A Telegram bot that allows users to create, manage, and share music playlists made from Telegram audio files. Built with long-term goals of playlist NFTs on TON blockchain.
 
