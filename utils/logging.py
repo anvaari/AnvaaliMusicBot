@@ -41,14 +41,21 @@ def get_logger(logger_name:str):
     """
     logger = logging.getLogger(logger_name)
     logger.setLevel(app_config.LOG_LEVEL)
+    logger.handlers.clear()
 
-    handler = logging.StreamHandler(sys.stdout)
+    console_handler = logging.StreamHandler(sys.stdout)
     formatter = EmojiFormatter(
         "%(asctime)s - %(levelname)s "
         "in %(filename)s at line %(lineno)d: "
         "%(message)s"
     )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    log_file= app_config.LOG_FILE
+    if log_file:
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     return logger
