@@ -20,7 +20,7 @@ jobs:
       
     - name: Build Docker image
       run: |
-        docker buildx build --platform linux/amd64 -t bilbomusicbot:latest .
+        docker buildx build --platform linux/amd64 -t bilbomusicbot:latest --load .
         
     - name: Test Docker image
       run: |
