@@ -25,12 +25,13 @@ jobs:
         
     - name: Test Docker image
       run: |
-        docker run --rm bilbomusicbot:latest python -c "
-        import sys
-        print('✅ Python environment working')
-        print('✅ Dependencies installed')
-        print('✅ Docker image built successfully')
-        "
+        docker run --rm -e BOT_TOKEN=${{ secrets.BOT_TOKEN }} bilbomusicbot:latest python -c "
+        try:
+            import bot
+            print('Bot module imported successfully')
+        except Exception as e:
+            print(f'Import failed: {e}')
+            exit(1)
 
   release:
     needs: build
