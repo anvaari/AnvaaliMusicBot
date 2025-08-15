@@ -32,6 +32,7 @@ jobs:
         except Exception as e:
             print(f'Import failed: {e}')
             exit(1)
+        "
 
   release:
     needs: build
