@@ -27,9 +27,9 @@ jobs:
         docker run --rm -e BOT_TOKEN=${{ secrets.BOT_TOKEN }} bilbomusicbot:latest python -c "
         try:
             import bot
-            print('✅ Bot module imported successfully')
+            print('Bot module imported successfully')
         except Exception as e:
-            print(f'❌ Import failed: {e}')
+            print(f'Import failed: {e}')
             exit(1)
         "
 
