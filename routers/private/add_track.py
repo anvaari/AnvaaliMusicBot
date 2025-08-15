@@ -166,18 +166,19 @@ async def handle_forwarded_audio(message: Message,state: FSMContext):
 
 
 @add_track_router.callback_query(F.data.startswith("add_music:"))
-async def handle_add_track_inline(callback: CallbackQuery):
+async def handle_add_track_inline(callback: CallbackQuery, state: FSMContext ):
     """
-    Edit the originating message to instruct the user how to add tracks to a specific playlist and acknowledge the callback.
+    Edit the originating message to open time windows for user to send audio files and acknowledge the callback.
     
     This handler expects callback.data in the form "prefix:playlist_name" (the playlist name is taken from the substring after the first colon).
-    It edits the callback's message text to tell the user to forward audio files and send the playlist name (no button press required), then answers the callback.
+    It edits the callback's message text to tell the user to forward audio files, then answers the callback.
     
     Parameters:
         callback (CallbackQuery): The incoming callback query whose data contains the playlist name.
+        state (FSMContext): The user's FSM context; it will be set as waiting_for_add_music
     
     Returns:
-        The result of callback.answer() (typically None).
+        The result of callback.answer() (typically None) or edit_callback_message if error occurred.
     """
     callback_text = get_callback_text_safe(callback)
     callback_message = get_callback_message(callback)
@@ -185,10 +186,34 @@ async def handle_add_track_inline(callback: CallbackQuery):
 
     playlist_name = callback_text.split(":")[1]
     
+    user_id = get_user_id(callback)
+    user_db_id = get_db_user_id(user_id)
+
+    if user_db_id is None:
+        logger.error(f"Cannot resolve DB user id for telegram_id={user_id}")
+        return await edit_text_message(f"{EMOJIS.FAIL.value} Internal error. Please try /start and retry.")    
+
+    playlist_db_id = get_playlist_id_by_name(user_db_id,playlist_name)
+    if playlist_db_id is False:
+        logger.warning(f"User {user_id} tried to add to non-existent playlist '{playlist_name}'")
+        await edit_text_message(
+            f"{EMOJIS.FAIL.value} Playlist with name `{playlist_name}` is not exist for this user."
+        )
+        return
+
+    user_contexts[user_id] = {
+        "playlist_name": playlist_name,
+        "playlist_db_id": playlist_db_id,
+        "timestamp": time.time(),
+        "tracks_added": 0
+    }
+    
+    await state.set_state(PlaylistStates.waiting_for_add_music)
+    
+    logger.info(f"User {user_id} started adding music to '{playlist_name}'")
     await edit_text_message(
-        f"{EMOJIS.LIST_WITH_PEN.value} To add track to `{playlist_name}` "
-        f"just forward tracks and type `{playlist_name}` "
-        "as message, no need to press any button."
+        f"{EMOJIS.MUSIC.value} Ready to add tracks to playlist: **{playlist_name}**\n"
+        f"{EMOJIS.CLOCK.value} Forward audio files within {app_config.ADD_TRACK_TIME_WINDOW} seconds\n"
     )
 
     return await callback.answer()
