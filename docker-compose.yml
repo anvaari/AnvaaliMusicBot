@@ -1,0 +1,18 @@
+services:
+  bilbomusicbot:
+    image: ${DOCKER_USERNAME}/bilbomusicbot:latest
+    container_name: bilbomusicbot
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - bilbonet
+
+networks:
+  bilbonet:
+    driver: bridge
+
+volumes:
+  data:

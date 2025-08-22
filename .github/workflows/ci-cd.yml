@@ -1,0 +1,102 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      run: |
+        docker buildx build --platform linux/amd64 -t bilbomusicbot:latest --load .
+        
+    - name: Test Docker image
+      run: |
+        docker run --rm -e BOT_TOKEN=${{ secrets.BOT_TOKEN }} bilbomusicbot:latest python -c "
+        try:
+            import bot
+            print('Bot module imported successfully')
+        except Exception as e:
+            print(f'Import failed: {e}')
+            exit(1)
+        "
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: prod
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        # if your server support ssh key use this format
+        # key: ${{ secrets.SERVER_SSH_KEY }}
+
+    - name: Build and push Docker image
+      run: |
+        docker buildx build --platform linux/amd64,linux/arm64 \
+          -t ${{ secrets.DOCKER_USERNAME }}/bilbomusicbot:latest \
+          -t ${{ secrets.DOCKER_USERNAME }}/bilbomusicbot:${{ github.ref_name }} \
+          --push .
+        
+    - name: Copy docker-compose.yml to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_SSH_KEY }}
+        source: "docker-compose.yml"
+        target: "/opt/bilbomusicbot/"
+        
+    - name: Prepare server for deployment
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          mkdir -p /opt/bilbomusicbot
+          cd /opt/bilbomusicbot
+          docker pull ${{ secrets.DOCKER_USERNAME }}/bilbomusicbot:latest
+          
+  deploy:
+    needs: release
+    runs-on: ubuntu-latest
+    environment: prod
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd /opt/bilbomusicbot
+          export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+          export BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+          docker compose down
+          docker compose up -d
+          docker system prune -f
